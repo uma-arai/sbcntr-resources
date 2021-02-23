@@ -465,3 +465,18 @@ Resources:
           - sbcntrSgManagement
           - GroupId
       ToPort: 443
+  sbcntrsgsgvpcefromContainerTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: HTTPS for Container App
+      FromPort: 443
+      GroupId:
+        Fn::GetAtt:
+          - sbcntrSgEgress
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - sbcntrSgContainer
+          - GroupId
+      ToPort: 443
