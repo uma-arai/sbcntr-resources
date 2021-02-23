@@ -258,7 +258,7 @@ Resources:
   sbcntrSubnetPrivateEgress1C:
     Type: AWS::EC2::Subnet
     Properties:
-      CidrBlock: 10.0.17.0/24
+      CidrBlock: 10.0.249.0/24
       VpcId:
         Ref: sbcntrVpc
       AvailabilityZone: ap-northeast-1c
