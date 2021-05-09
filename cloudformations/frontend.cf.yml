@@ -48,6 +48,10 @@ Resources:
           Environment:
             - Name: SESSION_SECRET_KEY
               Value: 1234567890123456789012345678901234
+            - Name: APP_SERVICE_HOST
+              Value: !Sub "http://${BackendALBHost}"
+            - Name: NOTIF_SERVICE_HOST
+              Value: !Sub "http://${BackendALBHost}"
           LogConfiguration:
               LogDriver: awslogs
               Options: 
