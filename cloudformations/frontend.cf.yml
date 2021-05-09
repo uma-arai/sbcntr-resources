@@ -19,6 +19,11 @@ Parameters:
   ALBSubnetId2:
     Description : Input 'ingress' Subnet ID for ap-northeast-1c
     Type : AWS::EC2::Subnet::Id
+# Backend ALB
+  BackendALBHost:
+    Description : Input 'sbcntr-backend' ALB FQDN name. Ex) sbcntr-alb-ingress...
+    Type: String
+
 
 Resources:
   ############### ECS ###############
@@ -32,7 +37,7 @@ Resources:
       Family: !Sub "${Prefix}-frontend-def"
       ContainerDefinitions:
         - Name: app
-          Image: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/sbcntr-frontend:v2"
+          Image: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/sbcntr-frontend:v1"
           Essential: true
           Cpu: 256
           MemoryReservation: 512
