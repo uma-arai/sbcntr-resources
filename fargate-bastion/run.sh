@@ -1,7 +1,7 @@
 #/bin/sh
 
 # Preparation
-SSM_SERVICE_ROLE_NAME="SSMServiceRole"
+SSM_SERVICE_ROLE_NAME="sbcntr-SSMServiceRole"
 SSM_ACTIVATION_FILE="code.json"
 AWS_REGION="ap-northeast-1"
 
