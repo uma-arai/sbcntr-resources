@@ -1,3 +1,4 @@
+
 Resources:
   sbcntrVpc:
     Type: AWS::EC2::VPC
