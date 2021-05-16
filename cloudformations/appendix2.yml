@@ -1,5 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: 'Appendix2 cloudformation. IAM group and user, password policy and CloudTrail.'
+Parameters:
+  InitialIAMPassword:
+    Type: String
+    Description: Initial login password
 Resources:
   # CloudTrail用KMSキーの作成
   cloudtrailKey:
@@ -297,6 +301,9 @@ Resources:
       UserName: sbcntr-user
       Groups: 
         - !Ref IAMGroupAdmin
+      LoginProfile:
+        Password: !Ref InitialIAMPassword
+        PasswordResetRequired: true
 
 # 
 Outputs:
