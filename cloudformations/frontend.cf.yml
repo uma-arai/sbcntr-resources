@@ -55,7 +55,7 @@ Resources:
           LogConfiguration:
               LogDriver: awslogs
               Options: 
-                awslogs-group: !Sub "/ecs/${Prefix}-frontend"
+                awslogs-group: !Sub "/ecs/${Prefix}-frontend-def"
                 awslogs-region: !Ref AWS::Region
                 awslogs-stream-prefix: ecs
       Cpu: 512
@@ -64,6 +64,12 @@ Resources:
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
+  sbcntrCloudWatchLogsFrontend:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/sbcntr-frontend-def
+      RetentionInDays: 14
+    UpdateReplacePolicy: Retain
 
   ############### Application Load Balancer ###############    
   sbcntrAlbFrontend:
