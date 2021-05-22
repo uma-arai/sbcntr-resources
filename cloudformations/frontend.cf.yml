@@ -19,10 +19,11 @@ Parameters:
   ALBSubnetId2:
     Description : Input 'ingress' Subnet ID for ap-northeast-1c
     Type : AWS::EC2::Subnet::Id
-# Backend ALB
-  BackendALBHost:
-    Description : Input 'sbcntr-backend' ALB FQDN name. Ex) sbcntr-alb-ingress...
+# Service Discovery
+  BackendHost:
+    Description : Input service discovery name for backend service
     Type: String
+    Defualt: sbcntr-ecs-backend-service.local
 
 
 Resources:
@@ -47,11 +48,11 @@ Resources:
               Protocol: tcp
           Environment:
             - Name: SESSION_SECRET_KEY
-              Value: 1234567890123456789012345678901234
+              Value: 41b678c65b37bf99c37bcab522802760
             - Name: APP_SERVICE_HOST
-              Value: !Sub "http://${BackendALBHost}"
+              Value: !Sub "http://${BackendHost}"
             - Name: NOTIF_SERVICE_HOST
-              Value: !Sub "http://${BackendALBHost}"
+              Value: !Sub "http://${BackendHost}"
           LogConfiguration:
               LogDriver: awslogs
               Options: 
