@@ -296,7 +296,22 @@ Resources:
           Value: sbcntr-sg-container
       VpcId:
         Ref: sbcntrVpc
-  sbcntrsgsgcontainerfromsbcntrbasesbcntrsgsgingress:
+  sbcntrSgContainerFromsMyself:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: HTTP for Ingress
+      FromPort: 80
+      GroupId:
+        Fn::GetAtt:
+          - sbcntrSgContainer
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - sbcntrSgContainer
+          - GroupId
+      ToPort: 80        
+  sbcntrSgContainerFromsSgIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
@@ -311,7 +326,7 @@ Resources:
           - sbcntrSgIngress
           - GroupId
       ToPort: 80
-  sbcntrsgsgcontainerfromsbcntrbasesbcntrsgsgmanagementTCP:
+  sbcntrSgContainerFromSgManagementTCP:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
@@ -326,7 +341,7 @@ Resources:
           - sbcntrSgManagement
           - GroupId
       ToPort: 80
-  sbcntrsgsgcontainerfromsbcntrbasesbcntrsgsgmanagementICMP:
+  sbcntrSgContainerFromSgManagementICMP:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: icmp
@@ -356,7 +371,7 @@ Resources:
           Value: sbcntr-sg-db
       VpcId:
         Ref: sbcntrVpc
-  sbcntrsgsgdbfromsbcntrbasesbcntrsgsgcontainerTCP:
+  sbcntrSgDbFromSgContainerTCP:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
@@ -371,11 +386,11 @@ Resources:
           - sbcntrSgContainer
           - GroupId
       ToPort: 3306
-  sbcntrsgsgdbfromsbcntrbasesbcntrsgsgcloudTCP:
+  sbcntrSgDbFromSgManagementTCP:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
-      Description: MySQL protocol from Cloud9
+      Description: MySQL protocol from management server
       FromPort: 3306
       GroupId:
         Fn::GetAtt:
