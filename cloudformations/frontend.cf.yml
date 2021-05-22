@@ -23,7 +23,7 @@ Parameters:
   BackendHost:
     Description : Input service discovery name for backend service
     Type: String
-    Defualt: sbcntr-ecs-backend-service.local
+    Default: sbcntr-ecs-backend-service.local
 
 
 Resources:
