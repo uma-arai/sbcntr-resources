@@ -300,7 +300,7 @@ Resources:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
-      Description: HTTP for Ingress
+      Description: HTTP for myself
       FromPort: 80
       GroupId:
         Fn::GetAtt:
