@@ -1,0 +1,56 @@
+{
+  "executionRoleArn": "arn:aws:iam::[aws_account_id]:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "secretOptions": null,
+        "options": {
+          "awslogs-group": "/ecs/sbcntr-backend-def",
+          "awslogs-region": "ap-northeast-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "portMappings": [
+        {
+          "hostPort": 80,
+          "protocol": "tcp",
+          "containerPort": 80
+        }
+      ],
+      "cpu": 256,
+      "environment": [],
+      "secrets": [
+        {
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:[aws_account_id]:secret:sbcntr/mysql-5wiK2m:host::",
+          "name": "DB_HOST"
+        },
+        {
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:[aws_account_id]:secret:sbcntr/mysql-5wiK2m:dbname::",
+          "name": "DB_NAME"
+        },
+        {
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:[aws_account_id]:secret:sbcntr/mysql-5wiK2m:password::",
+          "name": "DB_PASSWORD"
+        },
+        {
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:[aws_account_id]:secret:sbcntr/mysql-5wiK2m:username::",
+          "name": "DB_USERNAME"
+        }
+      ],
+      "memory": null,
+      "memoryReservation": 512,
+      "image": "<IMAGE1_NAME>",
+      "essential": true,
+      "name": "app"
+    }
+  ],
+  "memory": "1024",
+  "taskRoleArn": null,
+  "family": "sbcntr-backend-def",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "networkMode": "awsvpc",
+  "cpu": "512"
+}
