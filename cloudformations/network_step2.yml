@@ -1,3 +1,5 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Network resource template part1
 Resources:
   sbcntrVpc:
     Type: AWS::EC2::VPC

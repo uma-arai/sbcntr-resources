@@ -1,3 +1,5 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: management template
 Resources:
   Instance:
     Type: "AWS::EC2::Instance"
