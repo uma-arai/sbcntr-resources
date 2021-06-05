@@ -21,7 +21,10 @@ Resources:
       CidrBlock: 10.0.8.0/24
       VpcId:
         Ref: sbcntrVpc
-      AvailabilityZone: ap-northeast-1a
+      AvailabilityZone: 
+        Fn::Select: 
+          - 0
+          - Fn::GetAZs: ""
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
@@ -34,7 +37,10 @@ Resources:
       CidrBlock: 10.0.9.0/24
       VpcId:
         Ref: sbcntrVpc
-      AvailabilityZone: ap-northeast-1c
+      AvailabilityZone: 
+        Fn::Select: 
+          - 1
+          - Fn::GetAZs: ""
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
@@ -74,7 +80,10 @@ Resources:
       CidrBlock: 10.0.16.0/24
       VpcId:
         Ref: sbcntrVpc
-      AvailabilityZone: ap-northeast-1a
+      AvailabilityZone: 
+        Fn::Select: 
+          - 0
+          - Fn::GetAZs: ""
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
@@ -87,7 +96,10 @@ Resources:
       CidrBlock: 10.0.17.0/24
       VpcId:
         Ref: sbcntrVpc
-      AvailabilityZone: ap-northeast-1c
+      AvailabilityZone: 
+        Fn::Select: 
+          - 1
+          - Fn::GetAZs: ""
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
@@ -127,7 +139,10 @@ Resources:
       CidrBlock: 10.0.0.0/24
       VpcId:
         Ref: sbcntrVpc
-      AvailabilityZone: ap-northeast-1a
+      AvailabilityZone: 
+        Fn::Select: 
+          - 0
+          - Fn::GetAZs: ""
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
@@ -140,7 +155,10 @@ Resources:
       CidrBlock: 10.0.1.0/24
       VpcId:
         Ref: sbcntrVpc
-      AvailabilityZone: ap-northeast-1c
+      AvailabilityZone: 
+        Fn::Select: 
+          - 1
+          - Fn::GetAZs: ""
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
@@ -191,7 +209,10 @@ Resources:
       CidrBlock: 10.0.240.0/24
       VpcId:
         Ref: sbcntrVpc
-      AvailabilityZone: ap-northeast-1a
+      AvailabilityZone: 
+        Fn::Select: 
+          - 0
+          - Fn::GetAZs: ""
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
@@ -204,7 +225,10 @@ Resources:
       CidrBlock: 10.0.241.0/24
       VpcId:
         Ref: sbcntrVpc
-      AvailabilityZone: ap-northeast-1c
+      AvailabilityZone: 
+        Fn::Select: 
+          - 1
+          - Fn::GetAZs: ""
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
@@ -269,7 +293,10 @@ Resources:
       CidrBlock: 10.0.248.0/24
       VpcId:
         Ref: sbcntrVpc
-      AvailabilityZone: ap-northeast-1a
+      AvailabilityZone: 
+        Fn::Select: 
+          - 0
+          - Fn::GetAZs: ""
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
@@ -282,7 +309,10 @@ Resources:
       CidrBlock: 10.0.249.0/24
       VpcId:
         Ref: sbcntrVpc
-      AvailabilityZone: ap-northeast-1c
+      AvailabilityZone: 
+        Fn::Select: 
+          - 1
+          - Fn::GetAZs: ""
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
