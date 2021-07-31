@@ -55,7 +55,7 @@ Resources:
         Ref: sbcntrVpc
       Tags:
         - Key: Name
-          Value: sbcntr-coute-app
+          Value: sbcntr-route-app
   ## コンテナサブネットへルート紐付け
   sbcntrRouteAppAssociation1A:
     Type: AWS::EC2::SubnetRouteTableAssociation
