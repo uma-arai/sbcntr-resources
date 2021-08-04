@@ -10,9 +10,9 @@ aws ssm create-activation \
 --description "Activation Code for Fargate Bastion" \
 --default-instance-name bastion \
 --iam-role ${SSM_SERVICE_ROLE_NAME} \
---registration-limit 1 > ${SSM_ACTIVATION_FILE} \
---tags Key=Type,Value=Bastion
---region ${AWS_REGION}
+--registration-limit 1 \
+--tags Key=Type,Value=Bastion \
+--region ${AWS_REGION} | tee ${SSM_ACTIVATION_FILE}
 
 SSM_ACTIVATION_ID=`cat ${SSM_ACTIVATION_FILE} | jq -r .ActivationId`
 SSM_ACTIVATION_CODE=`cat ${SSM_ACTIVATION_FILE} | jq -r .ActivationCode`
