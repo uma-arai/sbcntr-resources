@@ -19,11 +19,11 @@ Parameters:
   ALBSubnetId2:
     Description : Input 'ingress' Subnet ID for ap-northeast-1c
     Type : AWS::EC2::Subnet::Id
-# Service Discovery
+# Backend loadbalancer
   BackendHost:
-    Description : Input service discovery name for backend service
+    Description : Input DNS A record of backend ALB
     Type: String
-    Default: sbcntr-ecs-backend-service.local
+    Default: internal-sbcntr-alb-internal-XXXXXXXXX.ap-northeast-1.elb.amazonaws.com
 
 
 Resources:
