@@ -321,7 +321,7 @@ Resources:
           Value: Isolated
 
   ############### Security groups ###############
-  ## インターネット公開のセキュリティグループの生成とルール紐付け
+  ## インターネット公開のセキュリティグループの生成
   sbcntrSgIngress:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -347,6 +347,7 @@ Resources:
           Value: sbcntr-sg-ingress
       VpcId:
         Ref: sbcntrVpc
+  ## 管理用サーバ向けのセキュリティグループの生成
   sbcntrSgManagement:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -361,7 +362,7 @@ Resources:
           Value: sbcntr-sg-management
       VpcId:
         Ref: sbcntrVpc
-  ## コンテナアプリ用セキュリティグループの生成とルール紐付け
+  ## バックエンドコンテナアプリ用セキュリティグループの生成
   sbcntrSgContainer:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -376,22 +377,70 @@ Resources:
           Value: sbcntr-sg-container
       VpcId:
         Ref: sbcntrVpc
-  sbcntrSgContainerFromsMyself:
-    Type: AWS::EC2::SecurityGroupIngress
+  ## フロントエンドコンテナアプリ用セキュリティグループの生成
+  sbcntrSgFrontContainer:
+    Type: AWS::EC2::SecurityGroup
     Properties:
-      IpProtocol: tcp
-      Description: HTTP for myself
-      FromPort: 80
-      GroupId:
-        Fn::GetAtt:
-          - sbcntrSgContainer
-          - GroupId
-      SourceSecurityGroupId:
-        Fn::GetAtt:
-          - sbcntrSgContainer
-          - GroupId
-      ToPort: 80        
-  sbcntrSgContainerFromsSgIngress:
+      GroupDescription: Security Group of front container app
+      GroupName: front-container
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      Tags:
+        - Key: Name
+          Value: sbcntr-sg-front-container
+      VpcId:
+        Ref: sbcntrVpc
+  ## 内部用ロードバランサ用のセキュリティグループの生成
+  sbcntrSgInternal:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for internal load balancer
+      GroupName: internal
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      Tags:
+        - Key: Name
+          Value: sbcntr-sg-internal
+      VpcId:
+        Ref: sbcntrVpc
+  ## DB用セキュリティグループの生成
+  sbcntrSgDb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group of database
+      GroupName: database
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      Tags:
+        - Key: Name
+          Value: sbcntr-sg-db
+      VpcId:
+        Ref: sbcntrVpc
+  ## VPCエンドポイント用セキュリティグループの生成
+  sbcntrSgEgress:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group of VPC Endpoint
+      GroupName: egress
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      Tags:
+        - Key: Name
+          Value: sbcntr-sg-vpce
+      VpcId:
+        Ref: sbcntrVpc
+
+  ## ルール紐付け
+  ### Internet LB -> Front Container
+  sbcntrSgFrontContainerFromsSgIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
@@ -399,13 +448,46 @@ Resources:
       FromPort: 80
       GroupId:
         Fn::GetAtt:
-          - sbcntrSgContainer
+          - sbcntrSgFrontContainer
           - GroupId
       SourceSecurityGroupId:
         Fn::GetAtt:
           - sbcntrSgIngress
           - GroupId
       ToPort: 80
+  ### Front Container -> Internal LB
+  sbcntrSgInternalFromSgFrontContainer:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: HTTP for front container
+      FromPort: 80
+      GroupId:
+        Fn::GetAtt:
+          - sbcntrSgInternal
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - sbcntrSgFrontContainer
+          - GroupId
+      ToPort: 80
+  ### Internal LB -> Back Container
+  sbcntrSgContainerFromSgInternal:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: HTTP for internal lb
+      FromPort: 80
+      GroupId:
+        Fn::GetAtt:
+          - sbcntrSgContainer
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - sbcntrSgInternal
+          - GroupId
+      ToPort: 80
+  ### Management server -> Back Container
   sbcntrSgContainerFromSgManagementTCP:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -436,21 +518,7 @@ Resources:
           - sbcntrSgManagement
           - GroupId
       ToPort: -1
-  ## DB用セキュリティグループの生成とルール紐付け
-  sbcntrSgDb:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security Group of database
-      GroupName: database
-      SecurityGroupEgress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow all outbound traffic by default
-          IpProtocol: "-1"
-      Tags:
-        - Key: Name
-          Value: sbcntr-sg-db
-      VpcId:
-        Ref: sbcntrVpc
+  ### Back container -> DB
   sbcntrSgDbFromSgContainerTCP:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -466,6 +534,7 @@ Resources:
           - sbcntrSgContainer
           - GroupId
       ToPort: 3306
+  ### Management server -> DB
   sbcntrSgDbFromSgManagementTCP:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -481,37 +550,7 @@ Resources:
           - sbcntrSgManagement
           - GroupId
       ToPort: 3306
-
-  ## VPCエンドポイント用セキュリティグループの生成とルール紐付け
-  sbcntrSgEgress:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security Group of VPC Endpoint
-      GroupName: egress
-      SecurityGroupEgress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow all outbound traffic by default
-          IpProtocol: "-1"
-      Tags:
-        - Key: Name
-          Value: sbcntr-sg-vpce
-      VpcId:
-        Ref: sbcntrVpc
-  sbcntrSgVpceFromSgManagementTCP:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      IpProtocol: tcp
-      Description: HTTPS for management server
-      FromPort: 443
-      GroupId:
-        Fn::GetAtt:
-          - sbcntrSgEgress
-          - GroupId
-      SourceSecurityGroupId:
-        Fn::GetAtt:
-          - sbcntrSgManagement
-          - GroupId
-      ToPort: 443
+  ### Back container -> VPC endpoint
   sbcntrSgVpceFromSgContainerTCP:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -525,5 +564,21 @@ Resources:
       SourceSecurityGroupId:
         Fn::GetAtt:
           - sbcntrSgContainer
+          - GroupId
+      ToPort: 443
+  ### Front container -> VPC endpoint
+  sbcntrSgVpceFromSgFrontContainerTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: HTTPS for Front Container App
+      FromPort: 443
+      GroupId:
+        Fn::GetAtt:
+          - sbcntrSgEgress
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - sbcntrSgFrontContainer
           - GroupId
       ToPort: 443
