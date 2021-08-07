@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Network resource template part1
 Resources:
+  # VPCの設定
   sbcntrVpc:
     Type: AWS::EC2::VPC
     Properties:
@@ -235,40 +236,21 @@ Resources:
           Value: sbcntr-subnet-public-management-1c
         - Key: Type
           Value: Public
-  ## 管理用サブネットのルートを新しく作成し、Ingresとは分離する
-  sbcntrRouteManagement:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId:
-        Ref: sbcntrVpc
-      Tags:
-        - Key: Name
-          Value: sbcntr-route-management
+  ## 管理用サブネットのルートはIngressと同様として作成する
   sbcntrRouteManagementAssociation1A:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId:
-        Ref: sbcntrRouteManagement
+        Ref: sbcntrRouteIngress
       SubnetId:
         Ref: sbcntrSubnetPublicManagement1A
   sbcntrRouteManagementAssociation1C:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId:
-        Ref: sbcntrRouteManagement
+        Ref: sbcntrRouteIngress
       SubnetId:
         Ref: sbcntrSubnetPublicManagement1C
-  ## 管理用ルートテーブルのデフォルトルート
-  sbcntrRouteManagementDefault:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId:
-        Ref: sbcntrRouteManagement
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId:
-        Ref: sbcntrIgw
-    DependsOn:
-      - sbcntrVpcgwAttachment
 
   # インターネットへ通信するためのゲートウェイの作成
   sbcntrIgw:
@@ -366,7 +348,7 @@ Resources:
   sbcntrSgContainer:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Security Group of container app
+      GroupDescription: Security Group of backend app
       GroupName: container
       SecurityGroupEgress:
         - CidrIp: 0.0.0.0/0
@@ -438,8 +420,8 @@ Resources:
       VpcId:
         Ref: sbcntrVpc
 
-  ## ルール紐付け
-  ### Internet LB -> Front Container
+  # ルール紐付け
+  ## Internet LB -> Front Container
   sbcntrSgFrontContainerFromsSgIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -455,7 +437,7 @@ Resources:
           - sbcntrSgIngress
           - GroupId
       ToPort: 80
-  ### Front Container -> Internal LB
+  ## Front Container -> Internal LB
   sbcntrSgInternalFromSgFrontContainer:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -471,7 +453,7 @@ Resources:
           - sbcntrSgFrontContainer
           - GroupId
       ToPort: 80
-  ### Internal LB -> Back Container
+  ## Internal LB -> Back Container
   sbcntrSgContainerFromSgInternal:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -487,7 +469,39 @@ Resources:
           - sbcntrSgInternal
           - GroupId
       ToPort: 80
-  ### Management server -> Back Container
+  ## Back container -> DB
+  sbcntrSgDbFromSgContainerTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: MySQL protocol from backend App
+      FromPort: 3306
+      GroupId:
+        Fn::GetAtt:
+          - sbcntrSgDb
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - sbcntrSgContainer
+          - GroupId
+      ToPort: 3306
+  ## Management server -> DB
+  sbcntrSgDbFromSgManagementTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: MySQL protocol from management server
+      FromPort: 3306
+      GroupId:
+        Fn::GetAtt:
+          - sbcntrSgDb
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - sbcntrSgManagement
+          - GroupId
+      ToPort: 3306
+  ## Management server -> Back Container
   sbcntrSgContainerFromSgManagementTCP:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -518,38 +532,6 @@ Resources:
           - sbcntrSgManagement
           - GroupId
       ToPort: -1
-  ### Back container -> DB
-  sbcntrSgDbFromSgContainerTCP:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      IpProtocol: tcp
-      Description: MySQL protocol from Container App
-      FromPort: 3306
-      GroupId:
-        Fn::GetAtt:
-          - sbcntrSgDb
-          - GroupId
-      SourceSecurityGroupId:
-        Fn::GetAtt:
-          - sbcntrSgContainer
-          - GroupId
-      ToPort: 3306
-  ### Management server -> DB
-  sbcntrSgDbFromSgManagementTCP:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      IpProtocol: tcp
-      Description: MySQL protocol from management server
-      FromPort: 3306
-      GroupId:
-        Fn::GetAtt:
-          - sbcntrSgDb
-          - GroupId
-      SourceSecurityGroupId:
-        Fn::GetAtt:
-          - sbcntrSgManagement
-          - GroupId
-      ToPort: 3306
   ### Back container -> VPC endpoint
   sbcntrSgVpceFromSgContainerTCP:
     Type: AWS::EC2::SecurityGroupIngress
