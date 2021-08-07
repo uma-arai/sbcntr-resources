@@ -452,8 +452,8 @@ Resources:
           - sbcntrSgManagement
           - GroupId
       ToPort: 3306  
-  ## Management server -> Back Container
-  sbcntrSgContainerFromSgManagementTCP:
+  ## Management server -> Internal LB
+  sbcntrSgInternalFromSgManagementTCP:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
@@ -461,25 +461,10 @@ Resources:
       FromPort: 80
       GroupId:
         Fn::GetAtt:
-          - sbcntrSgContainer
+          - sbcntrSgInternal
           - GroupId
       SourceSecurityGroupId:
         Fn::GetAtt:
           - sbcntrSgManagement
           - GroupId
       ToPort: 80
-  sbcntrSgContainerFromSgManagementICMP:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      IpProtocol: icmp
-      Description: ICMP for management server
-      FromPort: -1
-      GroupId:
-        Fn::GetAtt:
-          - sbcntrSgContainer
-          - GroupId
-      SourceSecurityGroupId:
-        Fn::GetAtt:
-          - sbcntrSgManagement
-          - GroupId
-      ToPort: -1
