@@ -517,21 +517,6 @@ Resources:
           - sbcntrSgManagement
           - GroupId
       ToPort: 80
-  sbcntrSgInternalFromSgManagementTestListener:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      IpProtocol: tcp
-      Description: 10080 for management server
-      FromPort: 10080
-      GroupId:
-        Fn::GetAtt:
-          - sbcntrSgInternal
-          - GroupId
-      SourceSecurityGroupId:
-        Fn::GetAtt:
-          - sbcntrSgManagement
-          - GroupId
-      ToPort: 10080
   ### Back container -> VPC endpoint
   sbcntrSgVpceFromSgContainerTCP:
     Type: AWS::EC2::SecurityGroupIngress
