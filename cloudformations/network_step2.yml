@@ -303,6 +303,7 @@ Resources:
           Value: Isolated
 
   ############### Security groups ###############
+  # セキュリティグループの生成
   ## インターネット公開のセキュリティグループの生成
   sbcntrSgIngress:
     Type: AWS::EC2::SecurityGroup
