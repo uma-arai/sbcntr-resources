@@ -4,6 +4,7 @@ Parameters:
   InitialIAMPassword:
     Type: String
     Description: Initial login password
+    NoEcho: true
 Resources:
   # CloudTrail用KMSキーの作成
   cloudtrailKey:
