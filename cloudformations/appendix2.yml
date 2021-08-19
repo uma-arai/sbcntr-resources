@@ -1,6 +1,10 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: 'Appendix2 cloudformation. IAM group and user, password policy and CloudTrail.'
 Parameters:
+  AdminUserName:
+    Type: String
+    Description: Admin name
+    Default: sbcntr-user
   InitialIAMPassword:
     Type: String
     Description: Initial login password
@@ -299,7 +303,7 @@ Resources:
     Type: AWS::IAM::User
     DeletionPolicy: Retain
     Properties:
-      UserName: sbcntr-user
+      UserName: !Ref AdminUserName
       Groups: 
         - !Ref IAMGroupAdmin
       LoginProfile:
