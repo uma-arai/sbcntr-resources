@@ -268,7 +268,7 @@ Resources:
         Ref: sbcntrIgw
 
   ############### Security groups ###############
-  # セキュリティがグループの生成
+  # セキュリティグループの生成
   ## インターネット公開のセキュリティグループの生成
   sbcntrSgIngress:
     Type: AWS::EC2::SecurityGroup
@@ -314,7 +314,7 @@ Resources:
   sbcntrSgContainer:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Security Group of container app
+      GroupDescription: Security Group of backend app
       GroupName: container
       SecurityGroupEgress:
         - CidrIp: 0.0.0.0/0
