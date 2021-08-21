@@ -436,6 +436,22 @@ Resources:
           - sbcntrSgContainer
           - GroupId
       ToPort: 3306
+  ## Front container -> DB
+  sbcntrSgDbFromSgFrontContainerTCP:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: MySQL protocol from frontend App
+      FromPort: 3306
+      GroupId:
+        Fn::GetAtt:
+          - sbcntrSgDb
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - sbcntrSgFrontContainer
+          - GroupId
+      ToPort: 3306
   ## Management server -> DB
   sbcntrSgDbFromSgManagementTCP:
     Type: AWS::EC2::SecurityGroupIngress
