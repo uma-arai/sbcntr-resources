@@ -566,7 +566,7 @@ Resources:
           - sbcntrSgFrontContainer
           - GroupId
       ToPort: 443
-  ### Front container -> VPC endpoint
+  ### Management Server -> VPC endpoint
   sbcntrSgVpceFromSgManagementTCP:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
