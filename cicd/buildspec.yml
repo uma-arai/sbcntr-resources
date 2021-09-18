@@ -21,7 +21,7 @@ phases:
         - IMAGE_TAG=$(echo ${CODEBUILD_RESOLVED_SOURCE_VERSION} | cut -c 1-7)
     build:
         commands:
-        - docker build -t ${REPOSITORY_URI}:${IMAGE_TAG} .
+        - docker image build -t ${REPOSITORY_URI}:${IMAGE_TAG} .
     post_build:
         commands:
         - docker push ${REPOSITORY_URI}:${IMAGE_TAG}
