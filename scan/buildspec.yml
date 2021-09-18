@@ -48,6 +48,6 @@ phases:
 
 artifacts:
     files:
-        - imageDetail.json
-        - trivy_results.json
-        - dockle_results.json
+    - imageDetail.json
+    - trivy_results.json
+    - dockle_results.json
