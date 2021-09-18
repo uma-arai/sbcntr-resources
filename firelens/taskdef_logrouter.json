@@ -3,13 +3,9 @@
   "containerDefinitions": [
     {
       "logConfiguration": {
-        "logDriver": "awslogs",
+        "logDriver": "awsfirelens",
         "secretOptions": null,
-        "options": {
-          "awslogs-group": "/ecs/sbcntr-backend-def",
-          "awslogs-region": "ap-northeast-1",
-          "awslogs-stream-prefix": "ecs"
-        }
+        "options": null
       },
       "portMappings": [
         {
@@ -19,7 +15,6 @@
         }
       ],
       "cpu": 256,
-      "readonlyRootFilesystem": true,
       "environment": [],
       "secrets": [
         {
@@ -42,8 +37,52 @@
       "memory": null,
       "memoryReservation": 512,
       "image": "<IMAGE1_NAME>",
+      "readonlyRootFilesystem": true,
       "essential": true,
       "name": "app"
+    },
+    {
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/aws/ecs/sbcntr-firelens-container",
+          "awslogs-region": "ap-northeast-1",
+          "awslogs-stream-prefix": "firelens"
+        }
+      },
+      "cpu": 64,
+      "environment": [
+        {
+          "name": "APP_ID",
+          "value": "backend-def"
+        },
+        {
+          "name": "AWS_ACCOUNT_ID",
+          "value": "[aws_account_id]"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "ap-northeast-1"
+        },
+        {
+          "name": "LOG_BUCKET_NAME",
+          "value": "sbcntr-[aws_account_id]"
+        },
+        {
+          "name": "LOG_GROUP_NAME",
+          "value": "/aws/ecs/sbcntr-backend-def"
+        }
+      ],
+      "memoryReservation": 128,
+      "image": "[aws_account_id].dkr.ecr.ap-northeast-1.amazonaws.com/sbcntr-base:log-router",
+      "firelensConfiguration": {
+        "type": "fluentbit",
+        "options": {
+          "config-file-type": "file",
+          "config-file-value": "/fluent-bit/custom.conf"
+        }
+      },
+      "name": "log_router"
     }
   ],
   "memory": "1024",
