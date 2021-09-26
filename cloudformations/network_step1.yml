@@ -11,7 +11,7 @@ Resources:
       InstanceTenancy: default
       Tags:
         - Key: Name
-          Value: sbcntrVpc
+          Value: sbcntr-vpc
 
   ############### Subnet, RouteTable, IGW ###############
   # コンテナ周りの設定
