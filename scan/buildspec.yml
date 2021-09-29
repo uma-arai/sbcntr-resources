@@ -8,46 +8,48 @@ env:
     
 phases:
     install:
-        runtime-versions:  
-            golang: 1.14
+        runtime-versions:
             docker: 19
+
     pre_build: 
         commands:
-        - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
-        - aws ecr --region ap-northeast-1 get-login-password | docker login --username AWS --password-stdin https://${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-1.amazonaws.com/sbcntr-backend
-        - REPOSITORY_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION_NAME}.amazonaws.com/${ECR_REPOSITORY_NAME}
-        # タグ名にGitのコミットハッシュを利用
-        - IMAGE_TAG=$(echo ${CODEBUILD_RESOLVED_SOURCE_VERSION} | cut -c 1-7)
-        # 事前準備: trivyをインストール
-        # コメントにあるcurlコマンドを利用して最新バージョンを取得も可能
-        #- TRIVY_VERSION=$(curl -sS https://api.github.com/repos/aquasecurity/trivy/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
-        - TRIVY_VERSION=0.19.2
-        - rpm -ivh https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.rpm
-        # 事前準備: dockleをインストール
-        # コメントにあるcurlコマンドを利用して最新バージョンを取得も可能
-        #- DOCKLE_VERSION=$(curl -sS https://api.github.com/repos/goodwithtech/dockle/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
-        - DOCKLE_VERSION=0.3.15
-        - rpm -ivh https://github.com/goodwithtech/dockle/releases/download/v${DOCKLE_VERSION}/dockle_${DOCKLE_VERSION}_Linux-64bit.rpm
+            - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
+            - aws ecr --region ap-northeast-1 get-login-password | docker login --username AWS --password-stdin https://${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-1.amazonaws.com/sbcntr-backend
+            - REPOSITORY_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION_NAME}.amazonaws.com/${ECR_REPOSITORY_NAME}
+            # タグ名にGitのコミットハッシュを利用
+            - IMAGE_TAG=$(echo ${CODEBUILD_RESOLVED_SOURCE_VERSION} | cut -c 1-7)
+            # 事前準備: trivyをインストール
+            # コメントにあるcurlコマンドを利用して最新バージョンを取得も可能
+            #- TRIVY_VERSION=$(curl -sS https://api.github.com/repos/aquasecurity/trivy/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
+            - TRIVY_VERSION=0.19.2
+            - rpm -ivh https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.rpm
+            # 事前準備: dockleをインストール
+            # コメントにあるcurlコマンドを利用して最新バージョンを取得も可能
+            #- DOCKLE_VERSION=$(curl -sS https://api.github.com/repos/goodwithtech/dockle/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
+            - DOCKLE_VERSION=0.3.15
+            - rpm -ivh https://github.com/goodwithtech/dockle/releases/download/v${DOCKLE_VERSION}/dockle_${DOCKLE_VERSION}_Linux-64bit.rpm
+    
     build:
         commands:
-        - docker image build -t ${REPOSITORY_URI}:${IMAGE_TAG} .
+            - docker image build -t ${REPOSITORY_URI}:${IMAGE_TAG} .
+    
     post_build:
         commands:
-        # trivyによるイメージスキャン(結果格納用)
-        - trivy --no-progress -f json -o trivy_results.json --exit-code 0 ${REPOSITORY_URI}:${IMAGE_TAG}
-        # trivyによるイメージスキャン(CRITICALレベルの脆弱性ある場合はBuild強制終了)
-        - trivy --no-progress --exit-code 1 --severity CRITICAL ${REPOSITORY_URI}:${IMAGE_TAG}
-        - exit `echo $?`
-        # dockleによるイメージチェック(FATALレベルの脆弱性ある場合はBuild強制終了)
-        - dockle --format json -o dockle_results.json --exit-code 1 --exit-level "FATAL" ${REPOSITORY_URI}:${IMAGE_TAG}
-        - exit `echo $?`
-        # DockerイメージをECRへプッシュ
-        - docker push ${REPOSITORY_URI}:${IMAGE_TAG}
-        # イメージURLを記録したJSONを作成
-        - printf '{"name":"%s","ImageURI":"%s"}' $ECR_REPOSITORY_NAME $REPOSITORY_URI:$IMAGE_TAG > imageDetail.json
+            # trivyによるイメージスキャン(結果格納用)
+            - trivy --no-progress -f json -o trivy_results.json --exit-code 0 ${REPOSITORY_URI}:${IMAGE_TAG}
+            # trivyによるイメージスキャン(CRITICALレベルの脆弱性ある場合はBuild強制終了)
+            - trivy --no-progress --exit-code 1 --severity CRITICAL ${REPOSITORY_URI}:${IMAGE_TAG}
+            - exit `echo $?`
+            # dockleによるイメージチェック(FATALレベルの脆弱性ある場合はBuild強制終了)
+            - dockle --format json -o dockle_results.json --exit-code 1 --exit-level "FATAL" ${REPOSITORY_URI}:${IMAGE_TAG}
+            - exit `echo $?`
+            # DockerイメージをECRへプッシュ
+            - docker image push ${REPOSITORY_URI}:${IMAGE_TAG}
+            # イメージURLを記録したJSONを作成
+            - printf '{"name":"%s","ImageURI":"%s"}' $ECR_REPOSITORY_NAME $REPOSITORY_URI:$IMAGE_TAG > imageDetail.json
 
 artifacts:
     files:
-    - imageDetail.json
-    - trivy_results.json
-    - dockle_results.json
+        - imageDetail.json
+        - trivy_results.json
+        - dockle_results.json
