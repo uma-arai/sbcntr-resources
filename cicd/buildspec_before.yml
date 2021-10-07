@@ -1,0 +1,28 @@
+version: 0.2
+
+env:
+    variables:
+        AWS_REGION_NAME: ap-northeast-1
+        ECR_REPOSITORY_NAME: sbcntr-backend
+        DOCKER_BUILDKIT: "1"
+    
+phases:
+    install:
+        runtime-versions:  
+            docker: 19
+
+    pre_build:
+        commands:
+            - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
+            - aws ecr --region ap-northeast-1 get-login-password | docker login --username AWS --password-stdin https://${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-1.amazonaws.com/sbcntr-backend
+            - REPOSITORY_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION_NAME}.amazonaws.com/${ECR_REPOSITORY_NAME}
+            # タグ名にGitのコミットハッシュを利用
+            - IMAGE_TAG=$(echo ${CODEBUILD_RESOLVED_SOURCE_VERSION} | cut -c 1-7)
+
+    build:
+        commands:
+            - docker image build -t ${REPOSITORY_URI}:${IMAGE_TAG} .
+
+    post_build:
+        commands:
+            - docker push ${REPOSITORY_URI}:${IMAGE_TAG}
