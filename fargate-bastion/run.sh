@@ -1,4 +1,4 @@
-#/bin/sh
+#!/bin/sh
 
 # Preparation
 SSM_SERVICE_ROLE_NAME="sbcntr-SSMServiceRole"
