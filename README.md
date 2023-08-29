@@ -1,3 +1,6 @@
+# 書籍の補足情報
+https://www.sbcr.jp/support/140444/
+
 # sbcntr-resources
 
 書籍用の各種リソースのダウンロードリポジトリです。
