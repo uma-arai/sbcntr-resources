@@ -1,0 +1,95 @@
+{
+  "Comment": "Sbcntr Container book batch app for reservation check",
+  "StartAt": "ListExecutions",
+  "States": {
+    "ListExecutions": {
+      "Type": "Task",
+      "Arguments": {
+        "StateMachineArn": "arn:aws:states:ap-northeast-1:123456789012:stateMachine:SbcntrReservationCheck",
+        "StatusFilter": "RUNNING"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:sfn:listExecutions",
+      "Next": "hasReservationCheckBatch",
+      "Output": {
+        "executionCount": "{% $count($states.result.Executions) %}"
+      }
+    },
+    "hasReservationCheckBatch": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "SkipExecution",
+          "Condition": "{% ($exists($states.input.executionCount) and ($states.input.executionCount) > (1)) %}"
+        }
+      ],
+      "Default": "ECS RunTask"
+    },
+    "SkipExecution": {
+      "Type": "Pass",
+      "End": true
+    },
+    "ECS RunTask": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.waitForTaskToken",
+      "Arguments": {
+        "LaunchType": "FARGATE",
+        "Cluster": "arn:aws:ecs:ap-northeast-1:123456789012:cluster/sbcntr-app",
+        "TaskDefinition": "arn:aws:ecs:ap-northeast-1:123456789012:task-definition/sbcntr-batch-reservation:1",
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "Subnets": ["TODO: sbcntr-private-app-aのサブネットIDをいれる"],
+            "SecurityGroups": [
+              "TODO: sbcntr-backend-appのセキュリティグループIDをいれる"
+            ],
+            "AssignPublicIp": "DISABLED"
+          }
+        },
+        "Overrides": {
+          "ContainerOverrides": [
+            {
+              "Name": "batch",
+              "Command": [
+                "./reservation-batch",
+                "{% $states.context.Task.Token %}"
+              ]
+            }
+          ]
+        }
+      },
+      "TimeoutSeconds": 240,
+      "Next": "Notification processing"
+    },
+    "Notification processing": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.sync",
+      "Arguments": {
+        "LaunchType": "FARGATE",
+        "Cluster": "arn:aws:ecs:ap-northeast-1:123456789012:cluster/sbcntr-app",
+        "TaskDefinition": "arn:aws:ecs:ap-northeast-1:123456789012:task-definition/sbcntr-batch-notification:1",
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "Subnets": ["TODO: sbcntr-private-app-aのサブネットIDをいれる"],
+            "SecurityGroups": [
+              "TODO: sbcntr-backend-appのセキュリティグループIDをいれる"
+            ],
+            "AssignPublicIp": "DISABLED"
+          }
+        },
+        "Overrides": {
+          "ContainerOverrides": [
+            {
+              "Name": "batch",
+              "Command": [
+                "./notification-batch",
+                "{% $string($states.input) %}"
+              ]
+            }
+          ]
+        }
+      },
+      "End": true,
+      "TimeoutSeconds": 120
+    }
+  },
+  "QueryLanguage": "JSONata"
+}

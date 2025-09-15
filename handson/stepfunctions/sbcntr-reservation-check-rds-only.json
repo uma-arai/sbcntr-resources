@@ -1,0 +1,99 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "ListExecutions",
+  "States": {
+    "ListExecutions": {
+      "Type": "Task",
+      "Arguments": {
+        "StateMachineArn": "arn:aws:states:ap-northeast-1:180294192305:stateMachine:SbcntrReservationCheck",
+        "StatusFilter": "RUNNING"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:sfn:listExecutions",
+      "Next": "hasReservationCheckBatch",
+      "Output": {
+        "executionCount": "{% $count($states.result.Executions) %}"
+      }
+    },
+    "hasReservationCheckBatch": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "SkipExecution",
+          "Condition": "{% ($exists($states.input.executionCount) and ($states.input.executionCount) > (1)) %}"
+        }
+      ],
+      "Default": "ExecuteStatement"
+    },
+    "ExecuteStatement": {
+      "Type": "Task",
+      "Arguments": {
+        "Database": "app",
+        "ResourceArn": "arn:aws:rds:ap-northeast-1:180294192305:cluster:sbcntr-main",
+        "SecretArn": "arn:aws:secretsmanager:ap-northeast-1:180294192305:secret:rds-db-credentials/cluster-CWQ6VRKMCPPKU3CPEC2AH2YEF4/sbcntruser/1741877167794-K0pwyR",
+        "Sql": "SELECT id,pet_id,user_id,reservation_date_time FROM reservations WHERE status = 'pending' ORDER BY reservation_date_time ASC"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:rdsdata:executeStatement",
+      "Assign": {
+        "reservations": "{% $states.result.Records[].{\n    \"id\": $[0].LongValue,\n    \"petId\": $[1].StringValue,\n    \"userName\": $[2].StringValue,\n    \"datetime\": $[3].StringValue\n} %}",
+        "count": "{% $count($states.result.Records) %}",
+        "params": "{% $states.result.Records[].{\n    \"Name\": \"id\",\n    \"Value\": {\n      \"LongValue\": $[0].LongValue\n    }\n} %}"
+      },
+      "Next": "hasPendingReservations"
+    },
+    "hasPendingReservations": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "BeginTransaction",
+          "Condition": "{% ($count) > (0) %}"
+        }
+      ],
+      "Default": "Nothing"
+    },
+    "BeginTransaction": {
+      "Type": "Task",
+      "Arguments": {
+        "Database": "app",
+        "ResourceArn": "arn:aws:rds:ap-northeast-1:180294192305:cluster:sbcntr-main",
+        "SecretArn": "arn:aws:secretsmanager:ap-northeast-1:180294192305:secret:rds-db-credentials/cluster-CWQ6VRKMCPPKU3CPEC2AH2YEF4/sbcntruser/1741877167794-K0pwyR"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:rdsdata:beginTransaction",
+      "Next": "BatchExecuteStatement",
+      "Assign": {
+        "transactionId": "{% $states.result.TransactionId %}"
+      }
+    },
+    "BatchExecuteStatement": {
+      "Type": "Task",
+      "Arguments": {
+        "Database": "app",
+        "ResourceArn": "arn:aws:rds:ap-northeast-1:180294192305:cluster:sbcntr-main",
+        "SecretArn": "arn:aws:secretsmanager:ap-northeast-1:180294192305:secret:rds-db-credentials/cluster-CWQ6VRKMCPPKU3CPEC2AH2YEF4/sbcntruser/1741877167794-K0pwyR",
+        "Sql": "UPDATE reservations SET status = 'confirmed' WHERE id = :id",
+        "TransactionId": "{% $transactionId %}",
+        "ParameterSets": "{% $partition($params,1) %}"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:rdsdata:batchExecuteStatement",
+      "Next": "CommitTransaction"
+    },
+    "CommitTransaction": {
+      "Type": "Task",
+      "Arguments": {
+        "ResourceArn": "arn:aws:rds:ap-northeast-1:180294192305:cluster:sbcntr-main",
+        "SecretArn": "arn:aws:secretsmanager:ap-northeast-1:180294192305:secret:rds-db-credentials/cluster-CWQ6VRKMCPPKU3CPEC2AH2YEF4/sbcntruser/1741877167794-K0pwyR",
+        "TransactionId": "{% $transactionId %}"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:rdsdata:commitTransaction",
+      "End": true
+    },
+    "Nothing": {
+      "Type": "Pass",
+      "End": true
+    },
+    "SkipExecution": {
+      "Type": "Pass",
+      "End": true
+    }
+  },
+  "QueryLanguage": "JSONata"
+}

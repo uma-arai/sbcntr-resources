@@ -1,0 +1,58 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["ecs:RunTask", "ecs:StopTask", "ecs:DescribeTasks"],
+      "Resource": [
+        "arn:aws:ecs:ap-northeast-1:123456789012:task-definition/sbcntr-batch-reservation:*",
+        "arn:aws:ecs:ap-northeast-1:123456789012:task-definition/sbcntr-batch-notification:*",
+        "arn:aws:ecs:ap-northeast-1:123456789012:task/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["events:PutTargets", "events:PutRule", "events:DescribeRule"],
+      "Resource": [
+        "arn:aws:events:ap-northeast-1:123456789012:rule/StepFunctionsGetEventsForECSTaskRule"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "xray:PutTraceSegments",
+        "xray:PutTelemetryRecords",
+        "xray:GetSamplingRules",
+        "xray:GetSamplingTargets"
+      ],
+      "Resource": ["*"]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogDelivery",
+        "logs:GetLogDelivery",
+        "logs:UpdateLogDelivery",
+        "logs:DeleteLogDelivery",
+        "logs:ListLogDeliveries",
+        "logs:PutResourcePolicy",
+        "logs:DescribeResourcePolicies",
+        "logs:DescribeLogGroups"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": [
+        "arn:aws:iam::123456789012:role/ecsTaskExecutionRole",
+        "arn:aws:iam::123456789012:role/SbcntrEcsBatchTaskRole"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": "states:ListExecutions",
+      "Resource": "*"
+    }
+  ]
+}

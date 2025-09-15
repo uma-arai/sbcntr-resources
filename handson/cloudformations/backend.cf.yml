@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Create backend base for sbcntr book 2nd edition
+Description: Create backend base
 
 ################# Input parameters ###############
 Parameters:
