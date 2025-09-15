@@ -1,0 +1,122 @@
+# 開発用EC2（通称、疑似Cloud9)のCloudFormationテンプレート
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Sbcntr development server stack
+################# Input parameters ###############
+Parameters:
+  VpcId:
+    Description : Input 'sbcntr' VPC ID
+    Type: AWS::EC2::VPC::Id
+  SecurityGroupId:
+    Description: Input 'management' SecurityGroup ID
+    Type: AWS::EC2::SecurityGroup::Id
+  ManagementSubnetId:
+    Description : Input 'management' Subnet ID for ap-northeast-1c
+    Type : AWS::EC2::Subnet::Id
+
+################# Resources ###############
+Resources:
+  # 開発用EC2のIAMロール
+  PseudoCloud9IamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser
+      Policies:
+        - PolicyName: ECSServiceUpdatePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecs:UpdateService
+                  - ecs:DescribeServices
+                  - ecs:DescribeClusters
+                  - ecs:ListServices
+                  - ecs:ListClusters
+                  - ecs:ListTasks
+                  - ecs:DescribeTasks
+                  - ecs:ExecuteCommand
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ssm:StartSession
+                Resource:
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:document/AmazonECS-ExecuteInteractiveCommand'
+                  - !Sub 'arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task/*'
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: ecs-tasks.amazonaws.com
+
+  # IAMインスタンスプロファイル
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref PseudoCloud9IamRole
+
+  # EC2インスタンスの作成
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t4g.small # 2025.02時点では0.0216USD/h
+      SubnetId: !Ref ManagementSubnetId
+      SecurityGroupIds:
+        - !Ref SecurityGroupId
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: ami-0976ced58148ef3eb  # uma-arai-pseudo-cloud9_2025-06-11T14-37-02.135Z2025-06-11T14-37-02.135Z
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 30
+            VolumeType: gp3
+            DeleteOnTermination: true
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          
+          # k6スクリプトを作成
+          cat > /home/ec2-user/load-test.js << 'EOF'
+          import http from 'k6/http';
+          import { check } from 'k6';
+
+          const TARGET_URL = __ENV.TARGET_URL || 'http://backend-app.sbcntr.local:8081/';
+          const VUS = __ENV.VUS ? parseInt(__ENV.VUS) : 100;
+          const ITERATIONS = __ENV.ITERATIONS ? parseInt(__ENV.ITERATIONS) : 1000000;
+
+          export const options = ITERATIONS ? {
+            // 固定回数実行の設定
+            vus: VUS,
+            iterations: ITERATIONS,
+          } : {
+            // 時間ベース実行の設定
+            vus: VUS,
+            duration: __ENV.DURATION || '10m',
+          };
+
+          export default function () {
+            const response = http.get(TARGET_URL);
+
+            check(response, {
+              'ステータスコードが200': (r) => r.status === 200,
+              'レスポンスタイムが1秒以内': (r) => r.timings.duration < 1000,
+            });
+          }
+          EOF
+          
+          # ファイルの所有者を設定
+          chown ec2-user:ec2-user /home/ec2-user/load-test.js
+      Tags:
+        - Key: Name
+          Value: sbcntr-pseudo-cloud9

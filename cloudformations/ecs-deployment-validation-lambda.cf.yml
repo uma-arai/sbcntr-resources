@@ -1,0 +1,245 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Lambda function for ECS Blue/Green deployment validation during TEST_TRAFFIC_SHIFT
+
+################# Input parameters ###############
+Parameters:
+  Prefix:
+    Default: sbcntr
+    Type: String
+  TargetUrl:
+    Description: URL to send HTTP requests during validation
+    Type: String
+  CheckDurationSeconds:
+    Description: Duration in seconds to continue sending requests
+    Type: Number
+    Default: 60
+    MinValue: 10
+    MaxValue: 300
+
+Resources:
+  ############### Lambda Function ###############
+  DeploymentValidationLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "ECS-${Prefix}-deployment-validation"
+      Description: ECS Blue/Green deployment lifecycle hook validation function
+      Runtime: nodejs22.x
+      Handler: index.handler
+      MemorySize: 256
+      Timeout: 900
+      Environment:
+        Variables:
+          TARGET_URL: !Ref TargetUrl
+          CHECK_DURATION_SECONDS: !Ref CheckDurationSeconds
+      Role: !GetAtt DeploymentValidationLambdaRole.Arn
+      Code:
+        ZipFile: |
+          const https = require('https');
+          const http = require('http');
+          const { URL } = require('url');
+
+          exports.handler = async (event, context) => {
+              try {
+                  // 1. イベント情報をログ出力
+                  console.log('Lifecycle hook event:', JSON.stringify(event, null, 2));
+                  
+                  // タイムアウト監視の設定
+                  const timeoutBuffer = 30000; // 30秒のバッファ
+                  const deadline = context.getRemainingTimeInMillis() - timeoutBuffer;
+                  
+                  const timeoutPromise = new Promise((_, reject) => {
+                      setTimeout(() => reject(new Error('Timeout approaching')), deadline);
+                  });
+                  
+                  try {
+                      // 2. 検証ロジックを実行
+                      const validationResult = await Promise.race([
+                          performValidation(event, context),
+                          timeoutPromise
+                      ]);
+                      
+                      // 3. 結果に応じてhookStatusを返す
+                      return { hookStatus: validationResult };
+                      
+                  } catch (error) {
+                      if (error.message === 'Timeout approaching') {
+                          console.log('Validation timeout approaching, returning IN_PROGRESS');
+                          return { hookStatus: 'IN_PROGRESS' };
+                      }
+                      throw error;
+                  }
+                  
+              } catch (error) {
+                  // 4. エラー時は必ずFAILEDを返す
+                  console.error('Validation error:', error);
+                  return { hookStatus: 'FAILED' };
+              }
+          };
+
+          async function performValidation(event, context) {
+              const targetUrl = process.env.TARGET_URL;
+              const checkDurationSeconds = parseInt(process.env.CHECK_DURATION_SECONDS) || 60;
+              
+              if (!targetUrl) {
+                  console.error('TARGET_URL environment variable is not set');
+                  return 'FAILED';
+              }
+              
+              console.log(`Starting validation: URL=${targetUrl}, Duration=${checkDurationSeconds}s`);
+              console.log(`Service ARN: ${event.serviceArn}`);
+              console.log(`Target Service Revision ARN: ${event.targetServiceRevisionArn}`);
+              console.log(`Test Traffic Weights:`, event.testTrafficWeights);
+              console.log(`Production Traffic Weights:`, event.productionTrafficWeights);
+              
+              const parsedUrl = new URL(targetUrl);
+              const isHttps = parsedUrl.protocol === 'https:';
+              const client = isHttps ? https : http;
+              
+              const startTime = Date.now();
+              const endTime = startTime + (checkDurationSeconds * 1000);
+              let requestCount = 0;
+              let successCount = 0;
+              let errorCount = 0;
+              
+              // Continuous validation loop
+              while (Date.now() < endTime) {
+                  // Check if we're approaching Lambda timeout
+                  if (context.getRemainingTimeInMillis() < 35000) {
+                      console.log('Lambda timeout approaching, returning IN_PROGRESS for continuation');
+                      return 'IN_PROGRESS';
+                  }
+                  
+                  try {
+                      const result = await makeRequest(parsedUrl, client);
+                      requestCount++;
+                      successCount++;
+                      console.log(`Request ${requestCount} successful: ${result.statusCode}`);
+                      
+                      // Wait between requests
+                      if (Date.now() < endTime - 1000) {
+                          await new Promise(resolve => setTimeout(resolve, 1000));
+                      }
+                  } catch (error) {
+                      requestCount++;
+                      errorCount++;
+                      console.error(`Request ${requestCount} failed:`, error.message);
+                      
+                      // If error rate is too high, fail immediately
+                      const errorRate = errorCount / requestCount;
+                      if (errorRate > 0.1 && requestCount >= 5) {
+                          console.error(`High error rate detected: ${(errorRate * 100).toFixed(2)}%`);
+                          return 'FAILED';
+                      }
+                  }
+              }
+              
+              const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+              const errorRate = errorCount / requestCount;
+              
+              console.log(`Validation completed: ${requestCount} requests in ${elapsedSeconds}s`);
+              console.log(`Success: ${successCount}, Errors: ${errorCount}, Error rate: ${(errorRate * 100).toFixed(2)}%`);
+              
+              // Determine final status based on error rate
+              if (errorRate > 0.01) {
+                  console.error(`Error rate ${(errorRate * 100).toFixed(2)}% exceeds threshold of 1%`);
+                  return 'FAILED';
+              }
+              
+              return 'SUCCEEDED';
+          }
+
+          function makeRequest(parsedUrl, client) {
+              return new Promise((resolve, reject) => {
+                  const options = {
+                      hostname: parsedUrl.hostname,
+                      port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+                      path: parsedUrl.pathname + parsedUrl.search,
+                      method: 'GET',
+                      timeout: 5000,
+                      headers: {
+                          'User-Agent': 'ECS-Deployment-Validator/2.0'
+                      }
+                  };
+                  
+                  const req = client.request(options, (res) => {
+                      let data = '';
+                      res.on('data', (chunk) => { data += chunk; });
+                      res.on('end', () => {
+                          if (res.statusCode >= 200 && res.statusCode < 400) {
+                              resolve({ statusCode: res.statusCode });
+                          } else {
+                              reject(new Error(`HTTP ${res.statusCode}: ${data.substring(0, 200)}`));
+                          }
+                      });
+                  });
+                  
+                  req.on('error', reject);
+                  req.on('timeout', () => {
+                      req.destroy();
+                      reject(new Error('Request timeout'));
+                  });
+                  
+                  req.end();
+              });
+          }
+
+  ############### IAM Role ###############
+  DeploymentValidationLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${Prefix}-ecs-deployment-validation-lambda-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: ECSLifecycleHookPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecs:DescribeServices
+                  - ecs:DescribeTaskDefinition
+                  - ecs:DescribeTasks
+                  - ecs:ListTasks
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - cloudwatch:GetMetricStatistics
+                  - cloudwatch:GetMetricData
+                Resource: "*"
+
+  ############### CloudWatch Logs ###############
+  DeploymentValidationLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/ECS-${Prefix}-deployment-validation"
+      RetentionInDays: 14
+    UpdateReplacePolicy: Retain
+
+  ############### Lambda Permission for ECS ###############
+  DeploymentValidationLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref DeploymentValidationLambda
+      Action: lambda:InvokeFunction
+      Principal: ecs.amazonaws.com
+
+################# Outputs ###############
+Outputs:
+  DeploymentValidationLambdaArn:
+    Description: ARN of the deployment validation Lambda function
+    Value: !GetAtt DeploymentValidationLambda.Arn
+    Export:
+      Name: !Sub "${Prefix}-deployment-validation-lambda-arn"
+  DeploymentValidationLambdaName:
+    Description: Name of the deployment validation Lambda function
+    Value: !Ref DeploymentValidationLambda
+    Export:
+      Name: !Sub "${Prefix}-deployment-validation-lambda-name"

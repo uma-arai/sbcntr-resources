@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "VPC Endpoints for S3, ECR DKR, ECR API and CloudWatch Logs"
+
+Parameters:
+  Region:
+    Type: String
+    Description: "AWS region"
+    Default: ap-northeast-1
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: "ID of the target VPC"
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: "Subnets for Interface Endpoints"
+  SecurityGroupIds:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: "Security groups for Interface Endpoints"
+  # 2025.1時点ではAWS::EC2::RouteTable::Idは未サポート
+  RouteTableId:
+    Type: String
+    Description: "Route table for Gateway Endpoints"
+
+Resources:
+  EcrDkrVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VpcId
+      ServiceName: !Sub "com.amazonaws.${Region}.ecr.dkr"
+      VpcEndpointType: Interface
+      SubnetIds: !Ref SubnetIds
+      SecurityGroupIds: !Ref SecurityGroupIds
+      PrivateDnsEnabled: true
+      Tags:
+        - Key: Name
+          Value: "sbcntr-ecr-dkr"
+
+  EcrApiVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VpcId
+      ServiceName: !Sub "com.amazonaws.${Region}.ecr.api"
+      VpcEndpointType: Interface
+      SubnetIds: !Ref SubnetIds
+      SecurityGroupIds: !Ref SecurityGroupIds
+      PrivateDnsEnabled: true
+      Tags:
+        - Key: Name
+          Value: "sbcntr-ecr-api"
+
+  ##### Step1からの追加箇所 #####
+  CloudWatchLogsVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VpcId
+      ServiceName: !Sub "com.amazonaws.${Region}.logs"
+      VpcEndpointType: Interface
+      SubnetIds: !Ref SubnetIds
+      SecurityGroupIds: !Ref SecurityGroupIds
+      PrivateDnsEnabled: true
+      Tags:
+        - Key: Name
+          Value: "sbcntr-logs"
+  ##### 追加ここまで #####
+
+  S3GatewayVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VpcId
+      ServiceName: !Sub "com.amazonaws.${Region}.s3"
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref RouteTableId
+      Tags:
+        - Key: Name
+          Value: "sbcntr-s3"
+
+Outputs:
+  EcrDkrEndpointId:
+    Description: "ID of the ECR DKR VPC Endpoint"
+    Value: !Ref EcrDkrVpcEndpoint
+
+  EcrApiEndpointId:
+    Description: "ID of the ECR API VPC Endpoint"
+    Value: !Ref EcrApiVpcEndpoint
+
+  CloudWatchLogsEndpointId:
+    Description: "ID of the CloudWatch Logs VPC Endpoint"
+    Value: !Ref CloudWatchLogsVpcEndpoint
+
+  S3GatewayEndpointId:
+    Description: "ID of the S3 Gateway VPC Endpoint"
+    Value: !Ref S3GatewayVpcEndpoint

@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Create backend base for sbcntr book 2nd edition
+
+################# Input parameters ###############
+Parameters:
+  Prefix:
+    Default: sbcntr
+    Type: String
+  VpcId:
+    Description : Input 'sbcntr' VPC ID
+    Type: AWS::EC2::VPC::Id
+  EcsClusterArn:
+    Description: sbcntr ECS Cluster ARN
+    Type: String
+  Subnets:
+    Description: Subnets for ECS Service
+    Type: List<AWS::EC2::Subnet::Id>
+  SecurityGroups:
+    Description: Security Groups for ECS Service
+    Type: List<AWS::EC2::SecurityGroup::Id>
+
+Resources:
+  ############### ECS ###############
+  SbcntrTaskDefinitionBackend:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub "${Prefix}-backend-app"
+      ContainerDefinitions:
+        - Name: app
+          Image: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/sbcntr-backend-app:v1"
+          Essential: true
+          Cpu: 256
+          MemoryReservation: 256
+          PortMappings:
+            - ContainerPort: 8081
+              HostPort: 8081
+              Protocol: tcp
+          LogConfiguration:
+              LogDriver: awslogs
+              Options: 
+                awslogs-group: !Sub "/${Prefix}/backend-app"
+                awslogs-region: !Ref AWS::Region
+                awslogs-stream-prefix: ecs
+      Cpu: 256
+      Memory: 512
+      ExecutionRoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/ecsTaskExecutionRole"
+      NetworkMode: awsvpc
+      RuntimePlatform:
+        CpuArchitecture: ARM64
+        OperatingSystemFamily: LINUX
+      RequiresCompatibilities:
+        - FARGATE
+
+  SbcntrEcsService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref EcsClusterArn
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+      DesiredCount: 1
+      EnableECSManagedTags: true
+      HealthCheckGracePeriodSeconds: 60
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets: !Ref Subnets
+          AssignPublicIp: DISABLED
+          SecurityGroups: !Ref SecurityGroups
+      PlatformVersion: "1.4.0"
+      ServiceName: !Sub "${Prefix}-backend-app"
+      TaskDefinition: !Ref SbcntrTaskDefinitionBackend
+      ServiceRegistries:
+        - RegistryArn: !GetAtt SbcntrServiceDiscoveryService.Arn
+      Tags:
+        - Key: Project
+          Value: !Ref Prefix
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT0S
+        WaitOnResourceSignals: false
+
+  ############### Service Discovery ###############
+  # cf. https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-servicediscovery-privatednsnamespace.html
+  SbcntrServiceDiscoveryNamespace:
+    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
+    Properties:
+      Name: "sbcntr.local"  
+      Description: "sbcntr local namespace for ECS services"
+      Vpc: !Ref VpcId
+
+  # cf. https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-servicediscovery-service.html
+  SbcntrServiceDiscoveryService:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Name: "backend-app"
+      Description: "Backend App Service"
+      DnsConfig:
+        NamespaceId: !Ref SbcntrServiceDiscoveryNamespace
+        DnsRecords:
+          - Type: A
+            TTL: 10
+        RoutingPolicy: MULTIVALUE
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+
+  SbcntrCloudWatchLogsBackend:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${Prefix}/backend-app"
+      RetentionInDays: 14
+    UpdateReplacePolicy: Retain

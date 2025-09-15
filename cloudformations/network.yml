@@ -1,8 +1,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Network resource template part1
+Description: Network resource template
 Resources:
   # VPCの設定
-  sbcntrVpc:
+  Vpc:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: 10.0.0.0/16
@@ -11,17 +11,17 @@ Resources:
       InstanceTenancy: default
       Tags:
         - Key: Name
-          Value: sbcntrVpc
+          Value: sbcntr-main
 
   ############### Subnet, RouteTable, IGW ###############
   # コンテナ周りの設定
   ## コンテナアプリ用のプライベートサブネット
-  sbcntrSubnetPrivateContainer1A:
+  SubnetPrivateAppA:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.8.0/24
       VpcId:
-        Ref: sbcntrVpc
+        Ref: Vpc
       AvailabilityZone: 
         Fn::Select: 
           - 0
@@ -29,15 +29,15 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: sbcntr-subnet-private-container-1a
+          Value: sbcntr-private-app-a
         - Key: Type
           Value: Isolated
-  sbcntrSubnetPrivateContainer1C:
+  SubnetPrivateAppC:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.9.0/24
       VpcId:
-        Ref: sbcntrVpc
+        Ref: Vpc
       AvailabilityZone: 
         Fn::Select: 
           - 1
@@ -45,42 +45,42 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: sbcntr-subnet-private-container-1c
+          Value: sbcntr-private-app-c
         - Key: Type
           Value: Isolated
   ## コンテナアプリ用のルートテーブル
-  sbcntrRouteApp:
+  RouteApp:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId:
-        Ref: sbcntrVpc
+        Ref: Vpc
       Tags:
         - Key: Name
-          Value: sbcntr-route-app
+          Value: sbcntr-app
   ## コンテナサブネットへルート紐付け
-  sbcntrRouteAppAssociation1A:
+  RouteAppAssociationA:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId:
-        Ref: sbcntrRouteApp
+        Ref: RouteApp
       SubnetId:
-        Ref: sbcntrSubnetPrivateContainer1A
-  sbcntrRouteAppAssociation1C:
+        Ref: SubnetPrivateAppA
+  RouteAppAssociationC:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId:
-        Ref: sbcntrRouteApp
+        Ref: RouteApp
       SubnetId:
-        Ref: sbcntrSubnetPrivateContainer1C
+        Ref: SubnetPrivateAppC
 
   # DB周りの設定
   ## DB用のプライベートサブネット
-  sbcntrSubnetPrivateDb1A:
+  SubnetPrivateDbA:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.16.0/24
       VpcId:
-        Ref: sbcntrVpc
+        Ref: Vpc
       AvailabilityZone: 
         Fn::Select: 
           - 0
@@ -88,15 +88,15 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: sbcntr-subnet-private-db-1a
+          Value: sbcntr-private-db-a
         - Key: Type
           Value: Isolated
-  sbcntrSubnetPrivateDb1C:
+  SubnetPrivateDbC:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.17.0/24
       VpcId:
-        Ref: sbcntrVpc
+        Ref: Vpc
       AvailabilityZone: 
         Fn::Select: 
           - 1
@@ -104,42 +104,18 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: sbcntr-subnet-private-db-1c
+          Value: sbcntr-private-db-c
         - Key: Type
           Value: Isolated
-  ## DB用のルートテーブル
-  sbcntrRouteDb:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId:
-        Ref: sbcntrVpc
-      Tags:
-        - Key: Name
-          Value: sbcntr-route-db
-  ## DBサブネットへルート紐付け
-  sbcntrRouteDbAssociation1A:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId:
-        Ref: sbcntrRouteDb
-      SubnetId:
-        Ref: sbcntrSubnetPrivateDb1A
-  sbcntrRouteDbAssociation1C:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId:
-        Ref: sbcntrRouteDb
-      SubnetId:
-        Ref: sbcntrSubnetPrivateDb1C
 
   # Ingress周りの設定
   ## Ingress用のパブリックサブネット
-  sbcntrSubnetPublicIngress1A:
+  SubnetPublicIngressA:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.0.0/24
       VpcId:
-        Ref: sbcntrVpc
+        Ref: Vpc
       AvailabilityZone: 
         Fn::Select: 
           - 0
@@ -147,15 +123,15 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: sbcntr-subnet-public-ingress-1a
+          Value: sbcntr-public-ingress-a
         - Key: Type
           Value: Public
-  sbcntrSubnetPublicIngress1C:
+  SubnetPublicIngressC:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.1.0/24
       VpcId:
-        Ref: sbcntrVpc
+        Ref: Vpc
       AvailabilityZone: 
         Fn::Select: 
           - 1
@@ -163,53 +139,53 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: sbcntr-subnet-public-ingress-1c
+          Value: sbcntr-public-ingress-c
         - Key: Type
           Value: Public
   ## Ingress用のルートテーブル
-  sbcntrRouteIngress:
+  RouteIngress:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId:
-        Ref: sbcntrVpc
+        Ref: Vpc
       Tags:
         - Key: Name
-          Value: sbcntr-route-ingress
+          Value: sbcntr-ingress
   ## Ingressサブネットへルート紐付け
-  sbcntrRouteIngressAssociation1A:
+  RouteIngressAssociationA:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId:
-        Ref: sbcntrRouteIngress
+        Ref: RouteIngress
       SubnetId:
-        Ref: sbcntrSubnetPublicIngress1A
-  sbcntrRouteIngressAssociation1C:
+        Ref: SubnetPublicIngressA
+  RouteIngressAssociationC:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId:
-        Ref: sbcntrRouteIngress
+        Ref: RouteIngress
       SubnetId:
-        Ref: sbcntrSubnetPublicIngress1C
+        Ref: SubnetPublicIngressC
   ## Ingress用ルートテーブルのデフォルトルート
-  sbcntrRouteIngressDefault:
+  RouteIngressDefault:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId:
-        Ref: sbcntrRouteIngress
+        Ref: RouteIngress
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId:
-        Ref: sbcntrIgw
+        Ref: Igw
     DependsOn:
       - sbcntrVpcgwAttachment
 
   # 管理用サーバ周りの設定
-  ## 管理用のパブリックサブネット
-  sbcntrSubnetPublicManagement1A:
+  ## 管理用のプライベートサブネット
+  SubnetPublicManagementA:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.240.0/24
       VpcId:
-        Ref: sbcntrVpc
+        Ref: Vpc
       AvailabilityZone: 
         Fn::Select: 
           - 0
@@ -217,15 +193,15 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: sbcntr-subnet-public-management-1a
+          Value: sbcntr-public-management-a
         - Key: Type
           Value: Public
-  sbcntrSubnetPublicManagement1C:
+  SubnetPublicManagementC:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.241.0/24
       VpcId:
-        Ref: sbcntrVpc
+        Ref: Vpc
       AvailabilityZone: 
         Fn::Select: 
           - 1
@@ -233,44 +209,99 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: sbcntr-subnet-public-management-1c
+          Value: sbcntr-public-management-c
         - Key: Type
           Value: Public
-  ## 管理用サブネットのルートはIngressと同様として作成する
-  sbcntrRouteManagementAssociation1A:
+  ## 管理サブネット用のルートテーブル
+  RouteManagement:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: Vpc
+      Tags:
+        - Key: Name
+          Value: sbcntr-management
+  ## 管理用サブネットへルート紐付け
+  RouteManagementAssociationA:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId:
-        Ref: sbcntrRouteIngress
+        Ref: RouteManagement
       SubnetId:
-        Ref: sbcntrSubnetPublicManagement1A
-  sbcntrRouteManagementAssociation1C:
+        Ref: SubnetPublicManagementA
+  RouteManagementAssociationC:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId:
-        Ref: sbcntrRouteIngress
+        Ref: RouteManagement
       SubnetId:
-        Ref: sbcntrSubnetPublicManagement1C
-
+        Ref: SubnetPublicManagementC
+  ## 管理用ルートテーブルのデフォルトルート
+  RouteManagementDefault:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: RouteManagement
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: Igw
+    DependsOn:
+      - sbcntrVpcgwAttachment
+      
   # インターネットへ通信するためのゲートウェイの作成
-  sbcntrIgw:
+  Igw:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: sbcntr-igw
+          Value: sbcntr-main
   sbcntrVpcgwAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId:
-        Ref: sbcntrVpc
+        Ref: Vpc
       InternetGatewayId:
-        Ref: sbcntrIgw
+        Ref: Igw
+
+  # VPCエンドポイント周りの設定
+  ## VPCエンドポイント(Egress通信)用のプライベートサブネット
+  SubnetPrivateEgressA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.248.0/24
+      VpcId:
+        Ref: Vpc
+      AvailabilityZone: 
+        Fn::Select: 
+          - 0
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: sbcntr-private-egress-a
+        - Key: Type
+          Value: Isolated
+  SubnetPrivateEgressC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.249.0/24
+      VpcId:
+        Ref: Vpc
+      AvailabilityZone: 
+        Fn::Select: 
+          - 1
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: sbcntr-private-egress-c
+        - Key: Type
+          Value: Isolated
 
   ############### Security groups ###############
   # セキュリティグループの生成
   ## インターネット公開のセキュリティグループの生成
-  sbcntrSgIngress:
+  SgIngress:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security group for ingress
@@ -292,11 +323,11 @@ Resources:
           ToPort: 80
       Tags:
         - Key: Name
-          Value: sbcntr-sg-ingress
+          Value: sbcntr-ingress
       VpcId:
-        Ref: sbcntrVpc
+        Ref: Vpc
   ## 管理用サーバ向けのセキュリティグループの生成
-  sbcntrSgManagement:
+  SgManagement:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security Group of management server
@@ -307,56 +338,41 @@ Resources:
           IpProtocol: "-1"
       Tags:
         - Key: Name
-          Value: sbcntr-sg-management
+          Value: sbcntr-management
       VpcId:
-        Ref: sbcntrVpc
+        Ref: Vpc
   ## バックエンドコンテナアプリ用セキュリティグループの生成
-  sbcntrSgContainer:
+  SgBackendApp:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security Group of backend app
-      GroupName: container
+      GroupName: backend-app
       SecurityGroupEgress:
         - CidrIp: 0.0.0.0/0
           Description: Allow all outbound traffic by default
           IpProtocol: "-1"
       Tags:
         - Key: Name
-          Value: sbcntr-sg-container
+          Value: sbcntr-backend-app
       VpcId:
-        Ref: sbcntrVpc
+        Ref: Vpc
   ## フロントエンドコンテナアプリ用セキュリティグループの生成
-  sbcntrSgFrontContainer:
+  SgFrontendApp:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Security Group of front container app
-      GroupName: front-container
+      GroupDescription: Security Group of frontend app
+      GroupName: frontend-app
       SecurityGroupEgress:
         - CidrIp: 0.0.0.0/0
           Description: Allow all outbound traffic by default
           IpProtocol: "-1"
       Tags:
         - Key: Name
-          Value: sbcntr-sg-front-container
+          Value: sbcntr-frontend-app
       VpcId:
-        Ref: sbcntrVpc
-  ## 内部用ロードバランサ用のセキュリティグループの生成
-  sbcntrSgInternal:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for internal load balancer
-      GroupName: internal
-      SecurityGroupEgress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow all outbound traffic by default
-          IpProtocol: "-1"
-      Tags:
-        - Key: Name
-          Value: sbcntr-sg-internal
-      VpcId:
-        Ref: sbcntrVpc
+        Ref: Vpc
   ## DB用セキュリティグループの生成
-  sbcntrSgDb:
+  SgDb:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security Group of database
@@ -367,120 +383,135 @@ Resources:
           IpProtocol: "-1"
       Tags:
         - Key: Name
-          Value: sbcntr-sg-db
+          Value: sbcntr-db
       VpcId:
-        Ref: sbcntrVpc
+        Ref: Vpc
+  ## VPCエンドポイント用セキュリティグループの生成
+  SgEgress:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group of VPC Endpoint
+      GroupName: egress
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      Tags:
+        - Key: Name
+          Value: sbcntr-vpce
+      VpcId:
+        Ref: Vpc
 
   # ルール紐付け
-  ## Internet LB -> Front Container
-  sbcntrSgFrontContainerFromsSgIngress:
+  ## Internet LB -> Frontend app
+  SgFrontendAppFromsSgIngressTcp:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
       Description: HTTP for Ingress
-      FromPort: 80
+      FromPort: 8080
       GroupId:
         Fn::GetAtt:
-          - sbcntrSgFrontContainer
+          - SgFrontendApp
           - GroupId
       SourceSecurityGroupId:
         Fn::GetAtt:
-          - sbcntrSgIngress
+          - SgIngress
           - GroupId
-      ToPort: 80  
-  ## Front Container -> Internal LB
-  sbcntrSgInternalFromSgFrontContainer:
+      ToPort: 8080  
+  ## Frontend app -> Backend app
+  SgBackendAppFromSgFrontendAppTcp:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
-      Description: HTTP for front container
-      FromPort: 80
+      Description: HTTP for frontend app
+      FromPort: 8081
       GroupId:
         Fn::GetAtt:
-          - sbcntrSgInternal
+          - SgBackendApp
           - GroupId
       SourceSecurityGroupId:
         Fn::GetAtt:
-          - sbcntrSgFrontContainer
+          - SgFrontendApp
           - GroupId
-      ToPort: 80
-  ## Internal LB -> Back Container
-  sbcntrSgContainerFromSgInternal:
+      ToPort: 8081
+  ## BackendApp -> DB
+  SgDbFromSgBackendAppTcp:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
-      Description: HTTP for internal lb
-      FromPort: 80
+      Description: PostgreSQL protocol from backend App
+      FromPort: 5432
       GroupId:
         Fn::GetAtt:
-          - sbcntrSgContainer
+          - SgDb
           - GroupId
       SourceSecurityGroupId:
         Fn::GetAtt:
-          - sbcntrSgInternal
+          - SgBackendApp
           - GroupId
-      ToPort: 80      
-  ## Back container -> DB
-  sbcntrSgDbFromSgContainerTCP:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      IpProtocol: tcp
-      Description: MySQL protocol from backend App
-      FromPort: 3306
-      GroupId:
-        Fn::GetAtt:
-          - sbcntrSgDb
-          - GroupId
-      SourceSecurityGroupId:
-        Fn::GetAtt:
-          - sbcntrSgContainer
-          - GroupId
-      ToPort: 3306
-  ## Front container -> DB
-  sbcntrSgDbFromSgFrontContainerTCP:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      IpProtocol: tcp
-      Description: MySQL protocol from frontend App
-      FromPort: 3306
-      GroupId:
-        Fn::GetAtt:
-          - sbcntrSgDb
-          - GroupId
-      SourceSecurityGroupId:
-        Fn::GetAtt:
-          - sbcntrSgFrontContainer
-          - GroupId
-      ToPort: 3306
+      ToPort: 5432
   ## Management server -> DB
-  sbcntrSgDbFromSgManagementTCP:
+  SgDbFromSgManagementTcp:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
-      Description: MySQL protocol from management server
-      FromPort: 3306
+      Description: PostgreSQL protocol from management server
+      FromPort: 5432
       GroupId:
         Fn::GetAtt:
-          - sbcntrSgDb
+          - SgDb
           - GroupId
       SourceSecurityGroupId:
         Fn::GetAtt:
-          - sbcntrSgManagement
+          - SgManagement
           - GroupId
-      ToPort: 3306  
-  ## Management server -> Internal LB
-  sbcntrSgInternalFromSgManagementTCP:
+      ToPort: 5432  
+  ## Backend app -> VPC endpoint
+  SgVpceFromSgContainerTcp:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       IpProtocol: tcp
-      Description: HTTP for management server
-      FromPort: 80
+      Description: HTTPS for backend app
+      FromPort: 443
       GroupId:
         Fn::GetAtt:
-          - sbcntrSgInternal
+          - SgEgress
           - GroupId
       SourceSecurityGroupId:
         Fn::GetAtt:
-          - sbcntrSgManagement
+          - SgBackendApp
           - GroupId
-      ToPort: 80
+      ToPort: 443
+  ### Frontend app -> VPC endpoint
+  SgVpceFromSgFrontendAppTcp:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: HTTPS for frontend app
+      FromPort: 443
+      GroupId:
+        Fn::GetAtt:
+          - SgEgress
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - SgFrontendApp
+          - GroupId
+      ToPort: 443
+  ### Management Server -> VPC endpoint
+  SgVpceFromSgManagementTcp:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      Description: HTTPS for management server
+      FromPort: 443
+      GroupId:
+        Fn::GetAtt:
+          - SgEgress
+          - GroupId
+      SourceSecurityGroupId:
+        Fn::GetAtt:
+          - SgManagement
+          - GroupId
+      ToPort: 443
