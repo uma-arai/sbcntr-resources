@@ -1,0 +1,80 @@
+# service設定がないとクラッシュする
+service:
+  flush: 1
+
+parsers:
+  - name: json
+    format: json
+  - name: log_field_json_parser # "log" フィールド内のJSONをパースするための専用パーサー
+    format: json
+    time_key: time
+    time_keep: true
+
+pipeline:
+  inputs:
+    - name: forward
+      port: 24224
+      listen: 0.0.0.0
+    - name: forward
+      unix_path: /var/run/fluent.sock
+      mem_buf_limit: 25MB
+      tag: incoming
+    # - name: dummy
+    #   tag: incoming
+    #   dummy: '{"log": "{\"level\":\"info\",\"id\":\"\",\"time\":\"2025-05-10T21:57:42.444377808+09:00\",\"remote_ip\":\"127.0.0.1\",\"method\":\"GET\",\"uri\":\"/v1/helloworld\",\"status\":200,\"user_agent\":\"node\",\"message\":\"request\"}", "container_id": "deed31de30e54f3cb852878342917c47-0527074092", "container_name": "app", "source": "stdout"}'
+
+  filters:
+    # "log" フィールドの内容をパースしてトップレベルに展開
+    - name: parser
+      match: incoming
+      key_name: log
+      parser: log_field_json_parser
+      reserve_data: true
+
+    # 不要なフィールドを削除
+    - name: modify
+      match: incoming
+      remove:
+        - log # 元の "log" (文字列) フィールド
+
+    # レコードを新タグで再発行（info → access-log）
+    - name: rewrite_tag
+      match: incoming
+      rule: $level ^(info)$  access-log   false
+      emitter_name: re_emit_info
+    # レコードを新タグで再発行（error → error-log）
+    - name: rewrite_tag
+      match: incoming
+      rule: $level ^(error)$  error-log   false
+      emitter_name: re_emit_error
+
+  outputs:
+    # - name: stdout
+    #   match: access-log
+    #   format: json_lines
+    - name: cloudwatch_logs
+      match: error-log
+      region: ${AWS_REGION}
+      log_group_name: /${APP_PREFIX}/${APP_NAME}
+      log_stream_prefix: from-fluent-bit/
+      auto_create_group: false
+    - name: s3
+      match: access-log
+      bucket: sbcntr-application-logs-${AWS_ACCOUNT_ID}
+      total_file_size: 1M
+      upload_timeout: 1m
+      s3_key_format: "/${AWS_ACCOUNT_ID}/${APP_PREFIX}/${APP_NAME}/access-log/%Y/%m/%d/%H/$UUID.gz"
+      use_put_object: true
+      compression: gzip
+      canned_acl: bucket-owner-full-control
+      region: ${AWS_REGION}
+    - name: s3
+      match: error-log
+      bucket: sbcntr-application-logs-${AWS_ACCOUNT_ID}
+      total_file_size: 1M
+      upload_timeout: 1m
+      s3_key_format: "/${AWS_ACCOUNT_ID}/${APP_PREFIX}/${APP_NAME}/error-log/%Y/%m/%d/%H/$UUID.gz"
+      use_put_object: true
+      compression: gzip
+      canned_acl: bucket-owner-full-control
+      region: ${AWS_REGION}
