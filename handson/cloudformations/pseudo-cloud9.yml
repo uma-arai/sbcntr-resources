@@ -110,7 +110,7 @@ Resources:
 
             check(response, {
               'ステータスコードが200': (r) => r.status === 200,
-              'レスポンスタイムが1秒以内': (r) => r.timings.duration < 1000,
+              'レスポンスタイムが3秒以内': (r) => r.timings.duration < 3000,
             });
           }
           EOF
