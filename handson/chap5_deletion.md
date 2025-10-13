@@ -123,7 +123,7 @@ aws secretsmanager delete-secret \
 aws logs list-log-groups --query 'logGroups[*].logGroupName' | jq -r ".[]" | grep -i "sbcntr" | xargs -I@ aws logs delete-log-group --log-group-name @
 ```
 
-## VPCエンドポイント
+### VPCエンドポイント
 
 6章で削除済みの場合は実施不要です。
 CloudFormationによって作成されたVPCエンドポイントに対しては、次のコマンドで削除をしてください。
@@ -154,45 +154,6 @@ aws cloudformation delete-stack --stack-name sbcntr-pseudo-cloud9
 
 ```shell
 aws cloudformation delete-stack --stack-name sbcntr-base
-```
-
-## 削除の確認
-
-すべてのリソースが削除されたことを確認します。
-
-```shell
-# CloudFormationスタックの確認
-aws cloudformation list-stacks \
-  --stack-status-filter DELETE_COMPLETE \
-  --query 'StackSummaries[?contains(StackName, `sbcntr`)].StackName'
-
-# VPCの確認
-aws ec2 describe-vpcs \
-  --filters "Name=tag:Name,Values=sbcntr-*" \
-  --query 'Vpcs[].VpcId'
-```
-
-## 注意事項
-
-- RDSの削除には時間がかかります（5-10分程度）
-- CloudFormationスタックの削除が失敗した場合は、エラーメッセージを確認して手動でリソースを削除する必要があります
-- VPCエンドポイントは課金対象のため、確実に削除されたことを確認してください
-- Secrets Managerのシークレットは通常7日間の待機期間がありますが、`--force-delete-without-recovery`オプションで即座に削除できます
-
-## トラブルシューティング
-
-### CloudFormationスタックが削除できない場合
-
-依存関係のあるリソースが残っている可能性があります。CloudFormationのイベントタブでエラーを確認し、該当リソースを手動で削除してください。
-
-### VPCが削除できない場合
-
-VPC内にまだリソースが残っている可能性があります。特にENI（Elastic Network Interface）が残っていないか確認してください。
-
-```shell
-aws ec2 describe-network-interfaces \
-  --filters "Name=vpc-id,Values=<vpc-id>" \
-  --query 'NetworkInterfaces[].[NetworkInterfaceId,Description]'
 ```
 
 ### IAMリソースの削除
@@ -246,3 +207,42 @@ An error occurred (DeleteConflict) when calling the DeletePolicy operation: This
 ```
 
 これらについてはAWSマネジメントコンソールのIAM画面から手動で削除をしてください。
+
+## 削除の確認
+
+すべてのリソースが削除されたことを確認します。
+
+```shell
+# CloudFormationスタックの確認
+aws cloudformation list-stacks \
+  --stack-status-filter DELETE_COMPLETE \
+  --query 'StackSummaries[?contains(StackName, `sbcntr`)].StackName'
+
+# VPCの確認
+aws ec2 describe-vpcs \
+  --filters "Name=tag:Name,Values=sbcntr-*" \
+  --query 'Vpcs[].VpcId'
+```
+
+## 注意事項
+
+- RDSの削除には時間がかかります（5-10分程度）
+- CloudFormationスタックの削除が失敗した場合は、エラーメッセージを確認して手動でリソースを削除する必要があります
+- VPCエンドポイントは課金対象のため、確実に削除されたことを確認してください
+- Secrets Managerのシークレットは通常7日間の待機期間がありますが、`--force-delete-without-recovery`オプションで即座に削除できます
+
+## トラブルシューティング
+
+### CloudFormationスタックが削除できない場合
+
+依存関係のあるリソースが残っている可能性があります。CloudFormationのイベントタブでエラーを確認し、該当リソースを手動で削除してください。
+
+### VPCが削除できない場合
+
+VPC内にまだリソースが残っている可能性があります。特にENI（Elastic Network Interface）が残っていないか確認してください。
+
+```shell
+aws ec2 describe-network-interfaces \
+  --filters "Name=vpc-id,Values=<vpc-id>" \
+  --query 'NetworkInterfaces[].[NetworkInterfaceId,Description]'
+```
