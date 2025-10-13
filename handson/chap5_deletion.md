@@ -235,9 +235,28 @@ An error occurred (DeleteConflict) when calling the DeletePolicy operation: This
 ```shell
 # CloudFormationスタックの確認
 aws cloudformation list-stacks \
-  --stack-status-filter DELETE_COMPLETE \
-  --query 'StackSummaries[?contains(StackName, `sbcntr`)].StackName'
+  --query 'StackSummaries[?contains(StackName, `sbcntr`)].{Name: StackName, Status: StackStatus}'
+  --output table
+```
 
+`sbcntr`を含むStackが`DELETE_COMPLETE`状態になっていることを確認してください。
+
+```shell
+---------------------------------------------------------------------------------------
+|                                     ListStacks                                      |
++------------------------------------------------------------------+------------------+
+|                               Name                               |     Status       |
++------------------------------------------------------------------+------------------+
+|  sbcntr-backend-app                                              |  DELETE_COMPLETE |
+|  ECS-Console-V2-Service-sbcntr-frontend-app-sbcntr-app-17129ba6  |  DELETE_COMPLETE |
+|  Infra-ECS-Cluster-sbcntr-app-1d8d0ce4                           |  DELETE_COMPLETE |
+|  sbcntr-vpc-endpoint                                             |  DELETE_COMPLETE |
+|  sbcntr-pseudo-cloud9                                            |  DELETE_COMPLETE |
+|  sbcntr-base                                                     |  DELETE_COMPLETE |
++------------------------------------------------------------------+------------------+
+```
+
+```shell
 # VPCの確認
 aws ec2 describe-vpcs \
   --filters "Name=tag:Name,Values=sbcntr-*" \
