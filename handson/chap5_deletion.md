@@ -75,6 +75,12 @@ aws elbv2 delete-target-group \
 ### 4. RDS（Aurora）の削除
 
 ```shell
+# クラスターの削除保護を無効化
+aws rds modify-db-cluster \
+  --db-cluster-identifier sbcntr-main \
+  --no-deletion-protection \
+  --apply-immediately
+  
 # DBクラスター内のインスタンスを削除
 aws rds delete-db-instance \
   --db-instance-identifier sbcntr-main-instance-1 \
