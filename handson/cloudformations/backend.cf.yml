@@ -38,7 +38,7 @@ Resources:
           LogConfiguration:
               LogDriver: awslogs
               Options: 
-                awslogs-group: !Sub "/${Prefix}/backend-app"
+                awslogs-group: !Sub "/${Prefix}/ecs/backend-app"
                 awslogs-region: !Ref AWS::Region
                 awslogs-stream-prefix: ecs
       Cpu: 256

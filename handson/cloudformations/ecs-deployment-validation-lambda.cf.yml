@@ -219,7 +219,7 @@ Resources:
   DeploymentValidationLambdaLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub "/aws/lambda/ECS-${Prefix}-deployment-validation"
+      LogGroupName: !Sub "/${Prefix}/lambda/ECS-deployment-validation"
       RetentionInDays: 14
     UpdateReplacePolicy: Retain
 
