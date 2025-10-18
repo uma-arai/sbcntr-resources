@@ -21,8 +21,8 @@ phases:
       - echo ===== build phase =====
       - echo Docker Build started on `date`
       - echo Building the Docker image...
-      - docker buildx build -f Dockerfile.pnpm -t ${APP_NAME}:latest .
-      - docker tag ${APP_NAME}:latest ${ECR_REPOS_URI}:${IMAGE_TAG}
+      - docker buildx build -t ${APP_NAME}:latest .
+      - docker image tag ${APP_NAME}:latest ${ECR_REPOS_URI}:${IMAGE_TAG}
       - docker image ls
       - echo Completed the ${APP_NAME} Docker image build.
 
@@ -34,7 +34,7 @@ phases:
       - echo Logging in to Amazon ECR.
       - aws ecr get-login-password | docker login --username AWS --password-stdin "https://${ECR_REPOS_DOMAIN}"
       - echo Docker Image ${APP_NAME} pushing to ECR on `date`
-      - docker push ${ECR_REPOS_URI}:${IMAGE_TAG}
+      - docker image push ${ECR_REPOS_URI}:${IMAGE_TAG}
       - echo '[{"name":"app","imageUri":"'$ECR_REPOS_URI':'$IMAGE_TAG'"}]'  > imagedefinitions.json
 
 artifacts:
