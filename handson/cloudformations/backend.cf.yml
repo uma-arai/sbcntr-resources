@@ -109,6 +109,6 @@ Resources:
   SbcntrCloudWatchLogsBackend:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub "/${Prefix}/backend-app"
+      LogGroupName: !Sub "/${Prefix}/ecs/backend-app"
       RetentionInDays: 14
     UpdateReplacePolicy: Retain
