@@ -234,9 +234,23 @@ aws cloudformation delete-stack --stack-name sbcntr-vpcendpoint
 手動で作成した方は次のコマンドを順に実行してください。
 
 ```shell
-# VPCエンドポイントの一覧を確認
-aws ec2 describe-vpc-endpoints --region $AWS_REGION
+ENDPOINT_IDS=$(aws ec2 describe-vpc-endpoints \
+  --region "$AWS_REGION" \
+  --query "VpcEndpoints[?starts_with(Tags[?Key=='Name']|[0].Value, 'sbcntr-')].VpcEndpointId" \
+  --output text)
 
-# 各エンドポイントを削除（エンドポイントIDは実際のものに置き換え）
-aws ec2 delete-vpc-endpoints --vpc-endpoint-ids <endpoint-id> --region $AWS_REGION
+
+# 各エンドポイントをループで削除
+for ID in $ENDPOINT_IDS; do
+  NAME=$(aws ec2 describe-vpc-endpoints \
+    --vpc-endpoint-ids "$ID" \
+    --region "$AWS_REGION" \
+    --query "VpcEndpoints[0].Tags[?Key=='Name']|[0].Value" \
+    --output text)
+
+  echo "削除中: $ID (Name: $NAME)"
+  aws ec2 delete-vpc-endpoints \
+    --vpc-endpoint-ids "$ID" \
+    --region "$AWS_REGION"
+done
 ```
