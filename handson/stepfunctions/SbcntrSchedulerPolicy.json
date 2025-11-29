@@ -1,0 +1,14 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "states:StartExecution"
+            ],
+            "Resource": [
+                "arn:aws:states:ap-northeast-1:123456789012:stateMachine:SbcntrReservationCheck"
+            ]
+        }
+    ]
+}
