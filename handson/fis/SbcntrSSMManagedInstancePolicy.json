@@ -1,0 +1,15 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "ssm:DeregisterManagedInstance",
+                "ssm:DeleteActivation",
+                "ssm:CreateActivation",
+                "ssm:AddTagsToResource"
+            ],
+            "Effect": "Allow",
+            "Resource": "*"
+        }
+    ]
+}
