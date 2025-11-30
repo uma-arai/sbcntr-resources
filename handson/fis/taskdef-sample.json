@@ -1,48 +1,105 @@
 {
+  "family": "sbcntr-backend-app",
   "containerDefinitions": [
     {
-      "name": "app"
-      // アプリケーションコンテナの定義が続きます
-    },
-    // 4点目のポイント
-    {
-      "name": "amazon-ssm-agent",
-      "image": "123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/sbcntr-ecr-public/amazon-ssm-agent/amazon-ssm-agent:latest",
       "cpu": 0,
-      "portMappings": [],
-      "essential": false,
+      "environment": [
+        {
+          "name": "DB_CONN",
+          "value": "1"
+        },
+        {
+          "name": "SBCNTR_DISABLE_LOGGING",
+          "value": "1"
+        },
+        {
+          "name": "DB_NAME",
+          "value": "app"
+        }
+      ],
+      "essential": true,
+      "image": "123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/sbcntr-backend-app:v1.0.1",
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/sbcntr/ecs/backend-app",
+          "awslogs-region": "ap-northeast-1",
+          "awslogs-stream-prefix": "ecs"
+        },
+        "secretOptions": []
+      },
+      "memoryReservation": 256,
+      "mountPoints": [],
+      "name": "app",
+      "portMappings": [
+        {
+          "containerPort": 8081,
+          "hostPort": 8081,
+          "name": "app-8081-tcp",
+          "protocol": "tcp"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DB_HOST",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:rds-db-credentials/cluster-xxx/sbcntruser/123456789012-4AIqPi:host::"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:rds-db-credentials/cluster-xxx/sbcntruser/123456789012-4AIqPi:password::"
+        },
+        {
+          "name": "DB_USERNAME",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:rds-db-credentials/cluster-xxx/sbcntruser/123456789012-4AIqPi:username::"
+        }
+      ],
+      "systemControls": [],
+      "volumesFrom": []
+    },
+    {
       "command": [
         "/bin/bash",
         "-c",
         "set -euo pipefail; sed -i 's|cdn.amazonlinux.com/al2023|al2023-repos-ap-northeast-1-de612dc2.s3.dualstack.ap-northeast-1.amazonaws.com|g' /etc/yum.repos.d/amazonlinux.repo; dnf upgrade -y; dnf install -y jq procps awscli; term_handler() { set +e; if [[ -n \"${ACTIVATION_ID:-}\" ]]; then echo \"Deleting SSM activation ${ACTIVATION_ID}\"; if ! aws ssm delete-activation --activation-id \"$ACTIVATION_ID\" --region \"${ECS_TASK_REGION:-}\" ; then echo \"SSM activation ${ACTIVATION_ID} failed to be deleted\" >&2; fi; fi; if [[ -f /var/lib/amazon/ssm/registration ]]; then MANAGED_INSTANCE_ID=$(jq -e -r .ManagedInstanceID /var/lib/amazon/ssm/registration); echo \"Deregistering SSM Managed Instance ${MANAGED_INSTANCE_ID}\"; if ! aws ssm deregister-managed-instance --instance-id \"$MANAGED_INSTANCE_ID\" --region \"${ECS_TASK_REGION:-}\" ; then echo \"SSM Managed Instance ${MANAGED_INSTANCE_ID} failed to be deregistered\" >&2; fi; fi; if [[ -n \"${SSM_AGENT_PID:-}\" ]]; then kill -SIGTERM \"$SSM_AGENT_PID\"; fi; }; trap term_handler SIGTERM SIGINT; if [[ -z \"${MANAGED_INSTANCE_ROLE_NAME:-}\" ]]; then echo \"Environment variable MANAGED_INSTANCE_ROLE_NAME not set,exiting\" >&2; exit 1; fi; if ! ps ax | grep amazon-ssm-agent | grep -v grep > /dev/null; then if [[ -n \"${ECS_CONTAINER_METADATA_URI_V4:-}\" ]]; then echo \"Found ECS Container Metadata,running activation with metadata\"; TASK_METADATA=$(curl -s \"${ECS_CONTAINER_METADATA_URI_V4}/task\"); ECS_TASK_AVAILABILITY_ZONE=$(echo \"$TASK_METADATA\" | jq -e -r '.AvailabilityZone'); ECS_TASK_ARN=$(echo \"$TASK_METADATA\" | jq -e -r '.TaskARN'); ECS_TASK_REGION=$(echo \"$ECS_TASK_AVAILABILITY_ZONE\" | sed 's/.$//' ); ECS_TASK_AVAILABILITY_ZONE_REGEX='^(af|ap|ca|cn|eu|me|sa|us|us-gov)-(central|north|(north(east|west))|south|south(east|west)|east|west)-[0-9][a-z]$'; if ! [[ \"$ECS_TASK_AVAILABILITY_ZONE\" =~ $ECS_TASK_AVAILABILITY_ZONE_REGEX ]]; then echo \"Error extracting Availability Zone from ECS Container Metadata,exiting\" >&2; exit 1; fi; ECS_TASK_ARN_REGEX='^arn:(aws|aws-cn|aws-us-gov):ecs:[a-z0-9-]+:[0-9]{12}:task/[a-zA-Z0-9_-]+/[a-zA-Z0-9]+$'; if ! [[ \"$ECS_TASK_ARN\" =~ $ECS_TASK_ARN_REGEX ]]; then echo \"Error extracting Task ARN from ECS Container Metadata,exiting\" >&2; exit 1; fi; CREATE_ACTIVATION_OUTPUT=$(aws ssm create-activation --iam-role \"$MANAGED_INSTANCE_ROLE_NAME\" --tags Key=ECS_TASK_AVAILABILITY_ZONE,Value=\"$ECS_TASK_AVAILABILITY_ZONE\" Key=ECS_TASK_ARN,Value=\"$ECS_TASK_ARN\" Key=FAULT_INJECTION_SIDECAR,Value=true --region \"$ECS_TASK_REGION\"); ACTIVATION_CODE=$(echo \"$CREATE_ACTIVATION_OUTPUT\" | jq -e -r .ActivationCode); ACTIVATION_ID=$(echo \"$CREATE_ACTIVATION_OUTPUT\" | jq -e -r .ActivationId); if ! amazon-ssm-agent -register -code \"$ACTIVATION_CODE\" -id \"$ACTIVATION_ID\" -region \"$ECS_TASK_REGION\" ; then echo \"Failed to register with AWS Systems Manager (SSM),exiting\" >&2; exit 1; fi; amazon-ssm-agent & SSM_AGENT_PID=$!; wait \"$SSM_AGENT_PID\"; else echo \"ECS Container Metadata not found,exiting\" >&2; exit 1; fi; else echo \"SSM agent is still already running(it might be for ECS Exec option),exiting\" >&2; exit 1; fi"
       ],
+      "cpu": 0,
       "environment": [
         {
           "name": "MANAGED_INSTANCE_ROLE_NAME",
           "value": "SbcntrSSMManagedInstanceRole"
         }
       ],
-      "environmentFiles": [],
-      "mountPoints": [],
-      "volumesFrom": [],
+      "essential": false,
+      "image": "123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/sbcntr-ecr-public/amazon-ssm-agent/amazon-ssm-agent:latest",
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
           "awslogs-group": "/sbcntr/ecs/backend-app-sidecar",
           "awslogs-region": "ap-northeast-1",
           "awslogs-stream-prefix": "ssm-agent"
-        },
-        "secretOptions": []
+        }
       },
-      "systemControls": []
+      "mountPoints": [],
+      "name": "amazon-ssm-agent",
+      "portMappings": [],
+      "systemControls": [],
+      "volumesFrom": []
     }
   ],
-  "family": "sbcntr-backend-app",
-  // 1点目のポイント
-  "enableFaultInjection": true,
-  // 2点目のポイント
   "taskRoleArn": "arn:aws:iam::123456789012:role/SbcntrEcsTaskRole",
-  // 3点目のポイント
+  "executionRoleArn": "arn:aws:iam::123456789012:role/ecsTaskExecutionRole",
+  "networkMode": "awsvpc",
+  "volumes": [],
+  "placementConstraints": [],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "256",
+  "memory": "512",
   "pidMode": "task",
-  "executionRoleArn": "arn:aws:iam::123456789012:role/ecsTaskExecutionRole"
+  "runtimePlatform": {
+    "cpuArchitecture": "ARM64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "enableFaultInjection": true
 }
