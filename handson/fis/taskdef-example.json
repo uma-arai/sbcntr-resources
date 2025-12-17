@@ -18,7 +18,7 @@
         }
       ],
       "essential": true,
-      "image": "{Todo: sbcntr-backend-appのイメージURI}",
+      "image": "123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/sbcntr-backend-app:v1.0.1",
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
@@ -42,15 +42,15 @@
       "secrets": [
         {
           "name": "DB_HOST",
-          "valueFrom": "{Todo: 自身のsecrets managerのhost}"
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:rds-db-credentials/cluster-xxx/sbcntruser/123456789012-4AIqPi:host::"
         },
         {
           "name": "DB_PASSWORD",
-          "valueFrom": "{Todo: 自身のsecrets managerのpassword}"
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:rds-db-credentials/cluster-xxx/sbcntruser/123456789012-4AIqPi:password::"
         },
         {
           "name": "DB_USERNAME",
-          "valueFrom": "{Todo: 自身のsecrets managerのusername}"
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-1:123456789012:secret:rds-db-credentials/cluster-xxx/sbcntruser/123456789012-4AIqPi:username::"
         }
       ],
       "systemControls": [],
@@ -70,7 +70,7 @@
         }
       ],
       "essential": false,
-      "image": "{Todo: 自身のAWSアカウントID}.dkr.ecr.ap-northeast-1.amazonaws.com/sbcntr-ecr-public/amazon-ssm-agent/amazon-ssm-agent:latest",
+      "image": "123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/sbcntr-ecr-public/amazon-ssm-agent/amazon-ssm-agent:latest",
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
@@ -86,8 +86,8 @@
       "volumesFrom": []
     }
   ],
-  "taskRoleArn": "arn:aws:iam::{Todo: 自身のAWSアカウントID}:role/SbcntrEcsTaskRole",
-  "executionRoleArn": "arn:aws:iam::{Todo: 自身のAWSアカウントID}:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::123456789012:role/SbcntrEcsTaskRole",
+  "executionRoleArn": "arn:aws:iam::123456789012:role/ecsTaskExecutionRole",
   "networkMode": "awsvpc",
   "volumes": [],
   "placementConstraints": [],
