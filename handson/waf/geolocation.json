@@ -1,0 +1,23 @@
+{
+    "Name": "GeoLocationCheck",
+    "Action": {
+        "Block": {}
+    },
+    "Priority": 8,
+    "VisibilityConfig": {
+        "SampledRequestsEnabled": true,
+        "CloudWatchMetricsEnabled": true,
+        "MetricName": "BlockNonJapanAccess"
+    },
+    "Statement": {
+        "NotStatement": {
+            "Statement": {
+                "GeoMatchStatement": {
+                    "CountryCodes": [
+                        "JP"
+                    ]
+                }
+            }
+        }
+    }
+}
